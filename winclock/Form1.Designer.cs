@@ -62,21 +62,25 @@
             // 
             resources.ApplyResources(this.label1, "label1");
             this.label1.Name = "label1";
+            this.label1.MouseEnter += new System.EventHandler(this.Form1MouseEnter);
             // 
             // label2
             // 
             resources.ApplyResources(this.label2, "label2");
             this.label2.Name = "label2";
+            this.label2.MouseEnter += new System.EventHandler(this.Form1MouseEnter);
             // 
             // label3
             // 
             resources.ApplyResources(this.label3, "label3");
             this.label3.Name = "label3";
+            this.label3.MouseEnter += new System.EventHandler(this.Form1MouseEnter);
             // 
             // label4
             // 
             resources.ApplyResources(this.label4, "label4");
             this.label4.Name = "label4";
+            this.label4.MouseEnter += new System.EventHandler(this.Form1MouseEnter);
             // 
             // labelCronTimer
             // 
