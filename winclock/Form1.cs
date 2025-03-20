@@ -97,7 +97,7 @@ namespace winclock
         private void Form1_Load(object sender, EventArgs e)
         {
             //鼠标穿透功能与鼠标移入自动隐藏功能互斥，若使用可穿透功能取消下行的注释即可。
-            //MC.Penetrate(this.Handle);
+            //util.Penetrate(this.Handle);
 
             //位置初始化
             this.Left = Screen.PrimaryScreen.WorkingArea.Width - this.Width;
