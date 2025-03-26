@@ -100,8 +100,9 @@ namespace winclock
             //util.Penetrate(this.Handle);
 
             //位置初始化
-            this.Left = Screen.PrimaryScreen.WorkingArea.Width - this.Width;
-            this.Top = 0;
+            //this.Left = Screen.PrimaryScreen.WorkingArea.Width - this.Width;
+            //this.Top = 0;
+            ShowOnMonitor(1);
             //系统初始化
             LabelCronTick(null, null);
             FlowBrandTick(null, null);
@@ -109,6 +110,28 @@ namespace winclock
             MouseEnterTick(null, null);
         }
         #endregion
+        private void ShowOnMonitor(int showOnMonitor)
+        {
+            Screen[] sc;
+            sc = Screen.AllScreens;
+            foreach (Screen screen in Screen.AllScreens)
+            {
+                Console.WriteLine($"Screen {screen.DeviceName}:");
+                Console.WriteLine($"  Bounds: {screen.Bounds}");
+                Console.WriteLine($"  WorkingArea: {screen.WorkingArea}");
+            }
+            Console.WriteLine($"Form1宽: {this.Width}");
+            if (showOnMonitor >= sc.Length)
+            {
+                showOnMonitor = 0;
+            }
+            this.StartPosition = FormStartPosition.Manual;   // 窗体的位置由 System.Windows.Forms.Control.Location 属性指定
+            Console.WriteLine($"Form1起始位置: {this.StartPosition}");
+            this.Location = new Point(sc[showOnMonitor].Bounds.Right - this.Width, sc[showOnMonitor].Bounds.Top);
+            // If you intend the form to be maximized, change it to normal then maximized.  
+            this.WindowState = FormWindowState.Normal;  //默认大小的窗口
+            this.WindowState = FormWindowState.Maximized;  //最大化的窗口
+        }
 
         #region private void labelCronTick(object sender, EventArgs e)
         /// <summary>
