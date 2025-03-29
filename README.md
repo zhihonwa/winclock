@@ -5,7 +5,7 @@
 2. 执行winclock.exe后将在您的电脑桌面右上角显示时间信息、阳历日期、阴历日期、星期以及日程提醒。
 3. winclock程序免安装，下载后点击即可执行。
 4. 运行中的winclock程序图标位于您的任务栏系统托盘（即^）中，当您需要关闭winclock程序时，只需右键单击系统托盘中该程序的图标，选择"退出"即可。
-
+![示例图片](winclock_demo.png)
 #### 开发环境
 - Visual Studio 2022
 - .NET Framwork 4.8
