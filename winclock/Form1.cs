@@ -216,7 +216,7 @@ namespace winclock
         /// <param name="e"></param>
         private void Form1MouseEnter(object sender, EventArgs e)
         {
-            this.Opacity = 0;
+            this.Opacity = 100;
             this.mouseEnterTimer.Enabled = true;
         }
         #endregion
@@ -239,6 +239,20 @@ namespace winclock
             }
         }
         #endregion
+        private Point mouseOffset;
+        private void Form1MouseDown(object sender, MouseEventArgs e)
+        {
+            mouseOffset = new Point(-e.X, -e.Y);
+        }
+        private void Form1MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Left)
+            {
+                Point mousePos = Control.MousePosition;
+                mousePos.Offset(mouseOffset.X, mouseOffset.Y);
+                Location = mousePos;
+            }
+        }
 
     }
 }
