@@ -100,9 +100,9 @@ namespace winclock
             //util.Penetrate(this.Handle);
 
             //位置初始化
-            //this.Left = Screen.PrimaryScreen.WorkingArea.Width - this.Width;
-            //this.Top = 0;
-            ShowOnMonitor(1);
+            this.Left = Screen.PrimaryScreen.WorkingArea.Width - this.Width;
+            this.Top = 0;
+            //ShowOnMonitor(1);
             //系统初始化
             LabelCronTick(null, null);
             FlowBrandTick(null, null);
