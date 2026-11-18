@@ -1,11 +1,7 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
-using System.Text;
 
 namespace winclock
 {
@@ -48,15 +44,8 @@ namespace winclock
 
         private const int WS_EX_TRANSPARENT = 0x20;
 
-        private const int GWL_EXSTYLE = (-20);
+private const int GWL_EXSTYLE = (-20);
 
-        private int Y_Step = 0;
-
-        private string FlowString = "";
-
-        private int FlowIndex = 0;
-
-        private string FlowTime = "";
         private const int SW_HIDE = 0;
         private const int SW_SHOW = 5;
         private const int ABM_SETSTATE = 0x0000000A;
@@ -149,46 +138,6 @@ namespace winclock
         }
         #endregion
 
-        #region get/set:public string NoticeContentString
-        /// <summary>
-        /// get得到字符串，每500ms获取一次模拟流水牌效果
-        /// set设置新的字符串
-        /// </summary>
-        public string NoticeContentString
-        {
-            get
-            {
-                if (FlowString == null || FlowString == "")
-                    return "";
-                int TMP = FlowString.Length;
-                if (FlowIndex > TMP - 1)
-                    FlowIndex = 0;
-                else
-                    FlowIndex++;
-                if (TMP < 12)
-                    return FlowString;
-                else if (TMP - FlowIndex > 20)
-                    return FlowString.Substring(FlowIndex, 20);
-                else
-                    return FlowString.Substring(FlowIndex, FlowString.Length - FlowIndex);
-            }
-            set
-            {
-                FlowString = value;
-            }
-        }
-        #endregion
-
-        #region get/set:public string NoticeTimeString
-        /// <summary>
-        /// 用于显示Schedule中的时间
-        /// </summary>
-        public string NoticeTimeString
-        {
-            get { return FlowTime; }
-            set { FlowTime = value; }
-        }
-        #endregion
 
         #region public void Penetrate(IntPtr Handle)
         /// <summary>
@@ -232,103 +181,5 @@ namespace winclock
         }
         #endregion
 
-        #region public string[,] ReadFromSchedule()
-        /// <summary>
-        /// 根据本地记录Schedule.txt获取时间和日程
-        /// 第一列数据为时间，第二列数据为日程，两列数据以_分割
-        /// </summary>
-        /// <returns></returns>
-        public string[,] ReadFromSchedule()
-        {
-            if (File.Exists("Schedule.txt"))
-            {
-                try
-                {
-                    using (StreamReader SR = new StreamReader("Schedule.txt", Encoding.UTF8))
-                    {
-                        string TMP = "";
-                        List<string> _Out_List = new List<string>();
-                        while ((TMP = SR.ReadLine()) != null)
-                            _Out_List.Add(TMP);
-                        string[] _Out_Temp = _Out_List.ToArray();
-                        int Total_Line = _Out_List.Count();
-                        string[,] _Out = new string[Total_Line, 2];
-                        for (int i = 0; i < Total_Line; i++)
-                        {
-                            string[] _Temp_For = _Out_Temp[i].Split('_');
-                            try
-                            {
-                                _Out[i, 0] = _Temp_For[0];
-                                _Out[i, 1] = _Temp_For[1];
-                            }
-                            catch (Exception Ex)
-                            {
-                                _Out[i, 0] = "25:00";
-                                _Out[i, 1] = Ex.Message;
-                            }
-                        }
-                        return _Out;
-                    }
-                }
-                catch (Exception Ex)
-                {
-                    return new string[,] { { "25:00", Ex.Message } };
-                }
-            }
-            else
-            {
-                using (FileStream fs = new FileStream("Schedule.txt", FileMode.Create))
-                {
-                    return new string[,] { { "24:00", "nothing" } };
-                }
-            }
-        }
-        #endregion
-
-        #region public string[] ReadNextLine(DateTime Time)
-        /// <summary>
-        /// 读取Schedule.txt中与当前事件最近的提醒
-        /// _Out[0]表示时间,格式00:00
-        /// _Out[1]表示内容
-        /// </summary>
-        /// <param name="Time"></param>
-        /// <returns></returns>
-        public string[] ReadNextLine(DateTime Time)
-        {
-            string[] _Out = new string[2];
-            string[,] _Temp_String = ReadFromSchedule();
-            int Total_Line = _Temp_String.Length / 2;
-            for (int i = 0; i < Total_Line; i++)
-            {
-                string[] Split_Time = _Temp_String[i, 0].Split(':');
-                if (Split_Time[0] == "-")
-                    continue;
-                int Hour = Convert.ToInt16(Split_Time[0]);
-                int Minute = Convert.ToInt16(Split_Time[1]);
-                //Hour>=24表示无日程或发生异常
-                if (Hour >= 24)
-                {
-                    _Out[0] = "";
-                    if (_Temp_String[i, 1] == "nothing")
-                    {
-                        _Out[1] = "暂无提醒哦！";
-                    }
-                    else
-                    {
-                        _Out[1] = "您的日程里时间格式填写有误，请检查(" + _Temp_String[i, 1] + ")";
-                    }
-                    break;
-                }
-                if ((Hour > Time.Hour) || (Hour == Time.Hour && Minute >= Time.Minute))
-                {
-                    _Out[0] = Hour.ToString("00:") + Minute.ToString("00");
-                    _Out[1] = _Temp_String[i, 1];
-                    //仅获取最近的日程
-                    break;
-                }
-            }
-            return _Out;
-        }
-        #endregion
     }
 }

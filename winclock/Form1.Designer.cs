@@ -2,22 +2,14 @@
 {
     partial class Form1
     {
-        /// <summary>
-        /// 必需的设计器变量。
-        /// </summary>
         private System.ComponentModel.IContainer components = null;
         private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label3;
-        private System.Windows.Forms.Label label4;
         private System.Windows.Forms.Timer labelCronTimer;
-        private System.Windows.Forms.Timer flowBrandTimer;
         private System.Windows.Forms.Timer mouseEnterTimer;
-        /// <summary>
-        /// 清理所有正在使用的资源。
-        /// </summary>
-        /// <param name="disposing">如果应释放托管资源，为 true；否则为 false。</param>
+
         protected override void Dispose(bool disposing)
         {
             if (disposing && (components != null))
@@ -29,96 +21,86 @@
 
         #region Windows 窗体设计器生成的代码
 
-        /// <summary>
-        /// 设计器支持所需的方法 - 不要
-        /// 使用代码编辑器修改此方法的内容。
-        /// </summary>
         private void InitializeComponent()
         {
             this.components = new System.ComponentModel.Container();
-            System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(Form1));
+
             this.tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
-            this.label4 = new System.Windows.Forms.Label();
             this.labelCronTimer = new System.Windows.Forms.Timer(this.components);
-            this.flowBrandTimer = new System.Windows.Forms.Timer(this.components);
             this.mouseEnterTimer = new System.Windows.Forms.Timer(this.components);
             this.tableLayoutPanel1.SuspendLayout();
             this.SuspendLayout();
-            // 
-            // tableLayoutPanel1
-            // 
-            resources.ApplyResources(this.tableLayoutPanel1, "tableLayoutPanel1");
+
+
+            this.tableLayoutPanel1.ColumnCount = 1;
+            this.tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle(System.Windows.Forms.SizeType.Percent, 100F));
+            this.tableLayoutPanel1.RowCount = 3;
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 140F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 50F));
+            this.tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Absolute, 50F));
             this.tableLayoutPanel1.Controls.Add(this.label1, 0, 0);
             this.tableLayoutPanel1.Controls.Add(this.label2, 0, 1);
             this.tableLayoutPanel1.Controls.Add(this.label3, 0, 2);
-            this.tableLayoutPanel1.Controls.Add(this.label4, 0, 3);
+            this.tableLayoutPanel1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tableLayoutPanel1.BackColor = System.Drawing.Color.Transparent;
+            this.tableLayoutPanel1.Margin = new System.Windows.Forms.Padding(0);
             this.tableLayoutPanel1.Name = "tableLayoutPanel1";
-            this.tableLayoutPanel1.MouseEnter += new System.EventHandler(this.Form1MouseEnter);
-            // 
-            // label1
-            // 
-            resources.ApplyResources(this.label1, "label1");
+
+            this.label1.AutoSize = false;
+            this.label1.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label1.Text = "00:00:00";
+            this.label1.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.label1.BackColor = System.Drawing.Color.Transparent;
+            this.label1.Margin = new System.Windows.Forms.Padding(0);
+            this.label1.Padding = new System.Windows.Forms.Padding(0);
             this.label1.Name = "label1";
-            this.label1.MouseEnter += new System.EventHandler(this.Form1MouseEnter);
-            // 
-            // label2
-            // 
-            resources.ApplyResources(this.label2, "label2");
+
+            this.label2.AutoSize = false;
+            this.label2.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label2.Text = "2000年01月01日 星期一";
+            this.label2.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.label2.BackColor = System.Drawing.Color.Transparent;
+            this.label2.Margin = new System.Windows.Forms.Padding(0);
+            this.label2.Padding = new System.Windows.Forms.Padding(0);
             this.label2.Name = "label2";
-            this.label2.MouseEnter += new System.EventHandler(this.Form1MouseEnter);
-            // 
-            // label3
-            // 
-            resources.ApplyResources(this.label3, "label3");
+
+            this.label3.AutoSize = false;
+            this.label3.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.label3.Text = "农历";
+            this.label3.TextAlign = System.Drawing.ContentAlignment.MiddleCenter;
+            this.label3.BackColor = System.Drawing.Color.Transparent;
+            this.label3.Margin = new System.Windows.Forms.Padding(0);
+            this.label3.Padding = new System.Windows.Forms.Padding(4, 0, 0, 0);
             this.label3.Name = "label3";
-            this.label3.MouseEnter += new System.EventHandler(this.Form1MouseEnter);
-            // 
-            // label4
-            // 
-            resources.ApplyResources(this.label4, "label4");
-            this.label4.Name = "label4";
-            this.label4.MouseEnter += new System.EventHandler(this.Form1MouseEnter);
-            // 
-            // labelCronTimer
-            // 
+
             this.labelCronTimer.Enabled = true;
             this.labelCronTimer.Interval = 1000;
             this.labelCronTimer.Tick += new System.EventHandler(this.LabelCronTick);
-            // 
-            // flowBrandTimer
-            // 
-            this.flowBrandTimer.Enabled = true;
-            this.flowBrandTimer.Interval = 500;
-            this.flowBrandTimer.Tick += new System.EventHandler(this.FlowBrandTick);
-            // 
-            // mouseEnterTimer
-            // 
+
             this.mouseEnterTimer.Interval = 500;
             this.mouseEnterTimer.Tick += new System.EventHandler(this.MouseEnterTick);
-            // 
-            // Form1
-            // 
-            resources.ApplyResources(this, "$this");
+
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.BackColor = System.Drawing.SystemColors.Control;
+            this.ClientSize = new System.Drawing.Size(574, 240);
             this.Controls.Add(this.tableLayoutPanel1);
+            this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.None;
+            this.MaximizeBox = false;
+            this.MinimizeBox = false;
             this.Name = "Form1";
             this.Opacity = 0.7D;
+            this.ShowIcon = false;
             this.ShowInTaskbar = false;
             this.TopMost = true;
             this.TransparencyKey = System.Drawing.SystemColors.Control;
             this.Load += new System.EventHandler(this.Form1_Load);
-            this.MouseDown += new System.Windows.Forms.MouseEventHandler(this.Form1MouseDown);
-            this.MouseEnter += new System.EventHandler(this.Form1MouseEnter);
-            this.MouseMove += new System.Windows.Forms.MouseEventHandler(this.Form1MouseMove);
             this.tableLayoutPanel1.ResumeLayout(false);
-            this.tableLayoutPanel1.PerformLayout();
             this.ResumeLayout(false);
-
         }
+
         #endregion
     }
 }
-

@@ -1,0 +1,76 @@
+name: Build Windows Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate tag
+        id: version
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}"
+          if ($tag -notmatch '^v(\d+\.\d+\.\d+)$') {
+            Write-Error "Tag must use the vX.Y.Z format, received: $tag"
+            exit 1
+          }
+          $version = $Matches[1]
+          "version=$version" >> $env:GITHUB_OUTPUT
+          Write-Host "WinClock version: $version"
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Set assembly version
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $path = "winclock\Properties\AssemblyInfo.cs"
+          $content = Get-Content $path -Raw
+          $content = $content -replace 'AssemblyVersion\("\d+\.\d+\.\d+\.\d+"\)', "AssemblyVersion(`"$version.0`")"
+          $content = $content -replace 'AssemblyFileVersion\("\d+\.\d+\.\d+\.\d+"\)', "AssemblyFileVersion(`"$version.0`")"
+          Set-Content -Path $path -Value $content -Encoding utf8
+
+      - name: Build
+        run: msbuild winclock.sln /m /p:Configuration=Release /p:Platform="Any CPU"
+
+      - name: Package executable
+        shell: pwsh
+        run: |
+          $version = "${{ steps.version.outputs.version }}"
+          $source = "winclock\bin\Release\winclock.exe"
+          if (-not (Test-Path $source)) {
+            throw "Build output not found: $source"
+          }
+          New-Item -ItemType Directory -Force -Path dist | Out-Null
+          $target = "dist\WinClock_v$version.exe"
+          Copy-Item $source $target
+          Get-Item $target | Format-List Name, Length, FullName
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: WinClock_v${{ steps.version.outputs.version }}
+          path: dist/WinClock_v${{ steps.version.outputs.version }}.exe
+          if-no-files-found: error
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          $tag = "${{ github.ref_name }}"
+          $version = "${{ steps.version.outputs.version }}"
+          $asset = "dist\WinClock_v$version.exe"
+          gh release create $tag $asset --title "WinClock $tag" --generate-notes

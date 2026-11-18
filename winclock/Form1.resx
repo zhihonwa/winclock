@@ -234,42 +234,6 @@
   <data name="&gt;&gt;label3.ZOrder" xml:space="preserve">
     <value>2</value>
   </data>
-  <data name="label4.Dock" type="System.Windows.Forms.DockStyle, System.Windows.Forms">
-    <value>Fill</value>
-  </data>
-  <data name="label4.Font" type="System.Drawing.Font, System.Drawing">
-    <value>宋体, 9.75pt</value>
-  </data>
-  <data name="label4.Location" type="System.Drawing.Point, System.Drawing">
-    <value>6, 240</value>
-  </data>
-  <data name="label4.Margin" type="System.Windows.Forms.Padding, System.Windows.Forms">
-    <value>6, 0, 6, 0</value>
-  </data>
-  <data name="label4.Size" type="System.Drawing.Size, System.Drawing">
-    <value>562, 39</value>
-  </data>
-  <data name="label4.TabIndex" type="System.Int32, mscorlib">
-    <value>2</value>
-  </data>
-  <data name="label4.Text" xml:space="preserve">
-    <value>日程提醒</value>
-  </data>
-  <data name="label4.TextAlign" type="System.Drawing.ContentAlignment, System.Drawing">
-    <value>MiddleCenter</value>
-  </data>
-  <data name="&gt;&gt;label4.Name" xml:space="preserve">
-    <value>label4</value>
-  </data>
-  <data name="&gt;&gt;label4.Type" xml:space="preserve">
-    <value>System.Windows.Forms.Label, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
-  </data>
-  <data name="&gt;&gt;label4.Parent" xml:space="preserve">
-    <value>tableLayoutPanel1</value>
-  </data>
-  <data name="&gt;&gt;label4.ZOrder" xml:space="preserve">
-    <value>3</value>
-  </data>
   <data name="tableLayoutPanel1.Dock" type="System.Windows.Forms.DockStyle, System.Windows.Forms">
     <value>Fill</value>
   </data>
@@ -283,7 +247,7 @@
     <value>3</value>
   </data>
   <data name="tableLayoutPanel1.Size" type="System.Drawing.Size, System.Drawing">
-    <value>574, 279</value>
+    <value>574, 240</value>
   </data>
   <data name="tableLayoutPanel1.TabIndex" type="System.Int32, mscorlib">
     <value>0</value>
@@ -301,13 +265,10 @@
     <value>0</value>
   </data>
   <data name="tableLayoutPanel1.LayoutSettings" type="System.Windows.Forms.TableLayoutSettings, System.Windows.Forms">
-    <value>&lt;?xml version="1.0" encoding="utf-16"?&gt;&lt;TableLayoutSettings&gt;&lt;Controls&gt;&lt;Control Name="label1" Row="0" RowSpan="1" Column="0" ColumnSpan="1" /&gt;&lt;Control Name="label2" Row="1" RowSpan="1" Column="0" ColumnSpan="1" /&gt;&lt;Control Name="label3" Row="2" RowSpan="1" Column="0" ColumnSpan="1" /&gt;&lt;Control Name="label4" Row="3" RowSpan="1" Column="0" ColumnSpan="1" /&gt;&lt;/Controls&gt;&lt;Columns Styles="Percent,100" /&gt;&lt;Rows Styles="Absolute,140,Absolute,50,Absolute,50,Absolute,20" /&gt;&lt;/TableLayoutSettings&gt;</value>
+    <value>&lt;?xml version="1.0" encoding="utf-16"?&gt;&lt;TableLayoutSettings&gt;&lt;Controls&gt;&lt;Control Name="label1" Row="0" RowSpan="1" Column="0" ColumnSpan="1" /&gt;&lt;Control Name="label2" Row="1" RowSpan="1" Column="0" ColumnSpan="1" /&gt;&lt;Control Name="label3" Row="2" RowSpan="1" Column="0" ColumnSpan="1" /&gt;&lt;/Controls&gt;&lt;Columns Styles="Percent,100" /&gt;&lt;Rows Styles="Absolute,140,Absolute,50,Absolute,50" /&gt;&lt;/TableLayoutSettings&gt;</value>
   </data>
   <metadata name="labelCronTimer.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>17, 17</value>
-  </metadata>
-  <metadata name="flowBrandTimer.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
-    <value>268, 17</value>
   </metadata>
   <metadata name="mouseEnterTimer.TrayLocation" type="System.Drawing.Point, System.Drawing, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b03f5f7f11d50a3a">
     <value>525, 17</value>

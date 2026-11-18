@@ -1,249 +1,391 @@
 ﻿using System;
 using System.Drawing;
-using System.Text;
 using System.Windows.Forms;
 
 namespace winclock
 {
-    public partial class Form1: Form
+    public partial class Form1 : Form
     {
+        private const string AppTitle = "WinClock";
+        private const int ScreenMargin = 8;
 
         private NotifyIcon notifyIcon;
-        private ContextMenuStrip trayMenu;        
-        private readonly StringBuilder _sb = new StringBuilder(32);
-        private string[] _reusableArray = new string[2];
-        private readonly StringBuilder _sb1 = new StringBuilder(64);  // 预分配足够容量  
-        private string _cachedFlowText = "";
-        int num = 0;
+        private ContextMenuStrip trayMenu;
+        private ContextMenuStrip clockMenu;
+        private readonly Util util = new Util();
+        private AppSettings _settings;
+        private Font _clockFont;
+        private Font _dateFont;
+        private int num;
+        private Point mouseOffset;
+        private bool _positioned;
 
         public Form1()
         {
             InitializeComponent();
-            this.Text = "我的时钟";
-            this.ShowInTaskbar = false;
-            InitializeTrayIcon();
+            Text = AppTitle;
+            ShowInTaskbar = false;
+            DoubleBuffered = true;
+            try
+            {
+                Icon = Icon.ExtractAssociatedIcon(Application.ExecutablePath);
+            }
+            catch (Exception)
+            {
+            }
+            _settings = SettingsStore.Load();
+            ApplySettings(_settings);
+            InitializeMenus();
+            WireInteractions(this);
         }
-        private void InitializeTrayIcon()
+
+        private void InitializeMenus()
         {
-            // 创建托盘图标
-            notifyIcon = new NotifyIcon
-            {
-                Icon = this.Icon, // 托盘专用图标（同桌面图标）
-                Text = "双击此处恢复窗口",
-                Visible = true // 默认显示
-            };
+            trayMenu = new ContextMenuStrip();
+            trayMenu.AutoClose = true;
+            trayMenu.ShowImageMargin = false;
+            trayMenu.BackColor = UiTheme.Surface;
+            trayMenu.ForeColor = UiTheme.Text;
+            trayMenu.Font = FontFactory.Create(AppSettings.DefaultClockFontFamily, 9.5f, FontStyle.Regular);
+            trayMenu.Renderer = new DarkMenuRenderer();
+            trayMenu.Items.Add("显示窗口", null, delegate { ShowWindow(); });
+            trayMenu.Items.Add("设置", null, delegate { OpenSettings(); });
+            trayMenu.Items.Add(new ToolStripSeparator());
+            trayMenu.Items.Add("退出", null, delegate { ExitApplication(); });
 
-            // 创建右键菜单
-            trayMenu = new ContextMenuStrip
-            {
-                AutoClose = false
-            };
-            trayMenu.Items.Add("显示窗口", null, (s, e) => ShowWindow());
-            trayMenu.Items.Add("退出", null, (s, e) => ExitApplication());
+            clockMenu = new ContextMenuStrip();
+            clockMenu.AutoClose = true;
+            clockMenu.ShowImageMargin = false;
+            clockMenu.BackColor = UiTheme.Surface;
+            clockMenu.ForeColor = UiTheme.Text;
+            clockMenu.Font = FontFactory.Create(AppSettings.DefaultClockFontFamily, 9.5f, FontStyle.Regular);
+            clockMenu.Renderer = new DarkMenuRenderer();
+            clockMenu.Items.Add("设置", null, delegate { OpenSettings(); });
+            clockMenu.Items.Add(new ToolStripSeparator());
+            clockMenu.Items.Add("退出", null, delegate { ExitApplication(); });
 
+            AssignContextMenu(this, clockMenu);
+
+            notifyIcon = new NotifyIcon();
+            notifyIcon.Icon = Icon ?? SystemIcons.Application;
+            notifyIcon.Text = "WinClock 桌面时钟";
+            notifyIcon.Visible = true;
             notifyIcon.ContextMenuStrip = trayMenu;
-
-            // 双击托盘图标恢复窗口
-            notifyIcon.DoubleClick += (s, e) => ShowWindow();
+            notifyIcon.DoubleClick += delegate { ShowWindow(); };
         }
 
-        #region private void ShowWindow()
-        /// <summary>
-        /// 系统托盘应用图标中右键菜单‘显示窗口’按钮鼠标单击事件
-        /// </summary>
-        
+        private static void AssignContextMenu(Control control, ContextMenuStrip menu)
+        {
+            control.ContextMenuStrip = menu;
+            foreach (Control child in control.Controls)
+            {
+                AssignContextMenu(child, menu);
+            }
+        }
+
+        private void WireInteractions(Control control)
+        {
+            control.MouseDown += Form1MouseDown;
+            control.MouseMove += Form1MouseMove;
+            control.MouseEnter += Form1MouseEnter;
+            foreach (Control child in control.Controls)
+            {
+                WireInteractions(child);
+            }
+        }
+
+        private void OpenSettings()
+        {
+            if (trayMenu != null)
+            {
+                trayMenu.Close();
+            }
+
+            if (clockMenu != null)
+            {
+                clockMenu.Close();
+            }
+
+            using (SettingsForm form = new SettingsForm(_settings.Clone(), ApplySettingsFromDialog))
+            {
+                form.Icon = Icon;
+                form.TopMost = TopMost;
+                form.ShowDialog(this);
+            }
+        }
+
+        private bool ApplySettingsFromDialog(AppSettings settings)
+        {
+            ApplySettings(settings);
+            bool success = true;
+
+            try
+            {
+                SettingsStore.Save(_settings);
+            }
+            catch (Exception)
+            {
+                MessageBox.Show(
+                    this,
+                    "设置文件保存失败，请检查当前用户配置目录的写入权限。",
+                    "WinClock",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                success = false;
+            }
+
+            try
+            {
+                SettingsStore.ApplyAutoStart(_settings.AutoStart);
+            }
+            catch (Exception)
+            {
+                MessageBox.Show(
+                    this,
+                    "自动启动设置写入失败，请检查当前用户启动项权限。",
+                    "WinClock",
+                    MessageBoxButtons.OK,
+                    MessageBoxIcon.Warning);
+                success = false;
+            }
+
+            return success;
+        }
+
+        private void ApplySettings(AppSettings settings)
+        {
+            if (settings == null)
+            {
+                settings = AppSettings.CreateDefault();
+            }
+
+            settings.Normalize();
+            _settings = settings;
+
+            int previousRight = _positioned ? Right : 0;
+            Font previousClockFont = _clockFont;
+            Font previousDateFont = _dateFont;
+
+            _clockFont = FontFactory.Create(settings.ClockFontFamily, settings.ClockFontSize, FontStyle.Bold);
+            _dateFont = FontFactory.Create(settings.DateFontFamily, settings.DateFontSize, FontStyle.Regular);
+
+            label1.Font = _clockFont;
+            label2.Font = _dateFont;
+            label3.Font = _dateFont;
+            label1.Visible = true;
+            label2.Visible = settings.ShowDate;
+            label3.Visible = settings.ShowLunar;
+
+            TopMost = settings.TopMost;
+
+            if (settings.DisableMinimize && WindowState == FormWindowState.Minimized)
+            {
+                WindowState = FormWindowState.Normal;
+            }
+
+            UpdateClockLayout();
+
+            if (_positioned)
+            {
+                Screen screen = Screen.FromControl(this);
+                int rightEdge = Math.Min(previousRight, screen.WorkingArea.Right - ScreenMargin);
+                Left = Math.Max(screen.WorkingArea.Left, rightEdge - Width);
+                if (Top < screen.WorkingArea.Top)
+                {
+                    Top = screen.WorkingArea.Top;
+                }
+                else if (Top + Height > screen.WorkingArea.Bottom)
+                {
+                    Top = Math.Max(screen.WorkingArea.Top, screen.WorkingArea.Bottom - Height);
+                }
+            }
+
+            ApplyOpacity();
+
+            if (previousClockFont != null)
+            {
+                previousClockFont.Dispose();
+            }
+
+            if (previousDateFont != null)
+            {
+                previousDateFont.Dispose();
+            }
+
+            if (IsHandleCreated)
+            {
+                LabelCronTick(null, null);
+            }
+        }
+
+        private void UpdateClockLayout()
+        {
+            Size timeSize = TextRenderer.MeasureText("00:00:00", _clockFont);
+            int timeHeight = Math.Max(_clockFont.Height + 6, timeSize.Height + 4);
+            int width = timeSize.Width;
+
+            int dateHeight = Math.Max(_dateFont.Height + 6, TextRenderer.MeasureText("0000年00月00日 星期天", _dateFont).Height + 4);
+            if (_settings.ShowDate)
+            {
+                width = Math.Max(width, TextRenderer.MeasureText("0000年00月00日 星期天", _dateFont).Width);
+            }
+
+            if (_settings.ShowLunar)
+            {
+                width = Math.Max(width, TextRenderer.MeasureText("农历甲乙（鼠）0000年闰正月初十", _dateFont).Width);
+            }
+
+            width = Math.Max(240, width + 24);
+            Screen screen = Screen.FromControl(this);
+            int maxWidth = Math.Max(240, screen.WorkingArea.Width - ScreenMargin * 2);
+            if (width > maxWidth)
+            {
+                width = maxWidth;
+            }
+
+            int height = timeHeight;
+            if (_settings.ShowDate)
+            {
+                height += dateHeight;
+            }
+
+            if (_settings.ShowLunar)
+            {
+                height += dateHeight + 4;
+            }
+
+            tableLayoutPanel1.RowStyles.Clear();
+            tableLayoutPanel1.RowCount = 3;
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, timeHeight));
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, _settings.ShowDate ? dateHeight : 0));
+            tableLayoutPanel1.RowStyles.Add(new RowStyle(SizeType.Absolute, _settings.ShowLunar ? dateHeight + 4 : 0));
+
+            ClientSize = new Size(width, height);
+            tableLayoutPanel1.PerformLayout();
+        }
+
+        private void ApplyOpacity()
+        {
+            if (!_settings.EnableTransparency)
+            {
+                Opacity = 1d;
+                return;
+            }
+
+            double value = Math.Max(0, Math.Min(100, _settings.OpacityPercent)) / 100d;
+            Opacity = value;
+        }
+
         private void ShowWindow()
         {
-            this.ShowInTaskbar = true;
-            this.WindowState = FormWindowState.Normal;
+            ShowInTaskbar = true;
+            WindowState = FormWindowState.Normal;
             notifyIcon.Visible = true;
             trayMenu.Close();
-            //实现任务栏折叠
-            //Util.ToggleTaskbarVisibility(false); 
-            //实现系统托盘自动隐藏效果
             Util.RefreshNotificationArea();
-            this.Show();
+            Show();
         }
-        #endregion
 
-        #region private void ExitApplication()
-        /// <summary>
-        /// 系统托盘应用图标中右键菜单‘退出’按钮鼠标单击事件
-        /// </summary>
-        
         private void ExitApplication()
         {
             trayMenu.Close();
+            clockMenu.Close();
+            notifyIcon.Visible = false;
             notifyIcon.Dispose();
-            Util.RefreshNotificationArea(); // 强制刷新托盘区域
+
+            if (_clockFont != null)
+            {
+                _clockFont.Dispose();
+            }
+
+            if (_dateFont != null)
+            {
+                _dateFont.Dispose();
+            }
+
             Application.Exit();
         }
-        #endregion
 
-         #region Util util = new Util();
-        /// <summary>
-        /// 引用Util类，可调用类内函数
-        /// </summary>
-       
-        readonly Util util = new Util();
-        #endregion
-
-        #region private void Form1_Load(object sender, EventArgs e)
-        /// <summary>
-        /// 窗口初始化事件
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void Form1_Load(object sender, EventArgs e)
         {
-            //鼠标穿透功能与鼠标移入自动隐藏功能互斥，若使用可穿透功能取消下行的注释即可。
-            //util.Penetrate(this.Handle);
+            try
+            {
+                SettingsStore.ApplyAutoStart(_settings.AutoStart);
+            }
+            catch (Exception)
+            {
+            }
 
-            //位置初始化
-            this.Left = Screen.PrimaryScreen.WorkingArea.Width - this.Width;
-            this.Top = 0;
-            //ShowOnMonitor(1);
-            //系统初始化
+            Screen screen = Screen.PrimaryScreen;
+            Left = screen.WorkingArea.Right - Width - ScreenMargin;
+            Top = screen.WorkingArea.Top + ScreenMargin;
+            _positioned = true;
             LabelCronTick(null, null);
-            FlowBrandTick(null, null);
-            Form1MouseEnter(null, null);
-            MouseEnterTick(null, null);
-        }
-        #endregion
-        private void ShowOnMonitor(int showOnMonitor)
-        {
-            Screen[] sc;
-            sc = Screen.AllScreens;
-            foreach (Screen screen in Screen.AllScreens)
-            {
-                Console.WriteLine($"Screen {screen.DeviceName}:");
-                Console.WriteLine($"  Bounds: {screen.Bounds}");
-                Console.WriteLine($"  WorkingArea: {screen.WorkingArea}");
-            }
-            Console.WriteLine($"Form1宽: {this.Width}");
-            if (showOnMonitor >= sc.Length)
-            {
-                showOnMonitor = 0;
-            }
-            this.StartPosition = FormStartPosition.Manual;   // 窗体的位置由 System.Windows.Forms.Control.Location 属性指定
-            Console.WriteLine($"Form1起始位置: {this.StartPosition}");
-            this.Location = new Point(sc[showOnMonitor].Bounds.Right - this.Width, sc[showOnMonitor].Bounds.Top);
-            // If you intend the form to be maximized, change it to normal then maximized.  
-            this.WindowState = FormWindowState.Normal;  //默认大小的窗口
-            this.WindowState = FormWindowState.Maximized;  //最大化的窗口
         }
 
-        #region private void labelCronTick(object sender, EventArgs e)
-        /// <summary>
-        /// 每秒钟执行一次，用于更新所显示的时间
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
+        private static readonly string[] WeekDays =
+        {
+            "星期天", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六"
+        };
+
         private void LabelCronTick(object sender, EventArgs e)
         {
-            this.TopMost = true;
-            string[] WeekDays = { "星期天", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六" };
-            DateTime now = DateTime.Now;
-            // 更新label1  时间
-            _sb.Clear();
-            _sb.Append(now.Hour.ToString("00"))
-               .Append(':')
-               .Append(now.Minute.ToString("00"))
-               .Append(':')
-               .Append(now.Second.ToString("00"));
-            label1.Text = _sb.ToString();
+            DateTime now = DateTime.UtcNow.AddHours(_settings.TimeZoneOffsetHours);
 
-            // 更新label2  阳历日期
-            _sb.Clear();
-            _sb.Append(now.ToString("yyyy年MM月dd日"))
-               .Append(' ')
-               .Append(WeekDays[(int)now.DayOfWeek]);
-            label2.Text = _sb.ToString();
-            // 更新label3 阴历日期
-            _sb.Clear();
-            _sb.Append(util.SolarToChineseLunisolarDate(now));
-            label3.Text = _sb.ToString();
-            Color[] SC = util.GetInverseColor(this.Location.X + this.Width / 2, this.Location.Y + 38);
-            label1.ForeColor = SC[0];
-            label2.ForeColor = SC[0];
-            label3.ForeColor = SC[0];
-            label4.ForeColor = SC[0];
-            BackColor = SC[1];
-            TransparencyKey = SC[1];
+            label1.Text = now.ToString("HH:mm:ss");
+
+            if (_settings.ShowDate)
+            {
+                label2.Text = now.ToString("yyyy年MM月dd日") + " " + WeekDays[(int)now.DayOfWeek];
+            }
+
+            if (_settings.ShowLunar)
+            {
+                label3.Text = util.SolarToChineseLunisolarDate(now);
+            }
+
+            int sampleY = Top + Math.Max(6, Math.Min(38, Height / 2));
+            Color[] colors = util.GetInverseColor(Left + Width / 2, sampleY);
+            label1.ForeColor = colors[0];
+            label2.ForeColor = colors[0];
+            label3.ForeColor = colors[0];
+            BackColor = colors[1];
+            TransparencyKey = colors[1];
         }
-        #endregion
 
-        #region private void FlowBrandTick(object sender, EventArgs e)
-        /// <summary>
-        /// 每0.5秒更新一次，提示牌流水效果
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
-        private void FlowBrandTick(object sender, EventArgs e)
-        {
-            //label4.Text = MC.Flow_Time + " " + MC.Flow_String;
-            Array.Copy(util.ReadNextLine(DateTime.Now), _reusableArray, 2);
-            util.NoticeTimeString = _reusableArray[0];
-            util.NoticeContentString = _reusableArray[1];
-            _sb1.Clear();
-            _sb1.Append(util.NoticeTimeString)
-               .Append(' ')
-               .Append(util.NoticeContentString);
-            if (_cachedFlowText != _sb1.ToString())
-            {
-                label4.Text = _sb1.ToString();
-                _cachedFlowText = _sb1.ToString();
-            }
-            if (flowBrandTimer.Interval == 500)
-            {
-                if (util.NoticeContentString == "")
-                {
-                    flowBrandTimer.Interval = 2000;
-                }
-            }
-            else
-            {
-                flowBrandTimer.Interval = 500;
-            }
-        }
-        #endregion
-
-        #region private void Form1MouseEnter(object sender, EventArgs e)
-        /// <summary>
-        /// 鼠标移入Form事件
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void Form1MouseEnter(object sender, EventArgs e)
         {
-            this.Opacity = 100;
-            this.mouseEnterTimer.Enabled = true;
-        }
-        #endregion
+            if (!_settings.EnableTransparency)
+            {
+                Opacity = 1d;
+                return;
+            }
 
-        #region public void MouseEnterTick(object sender, EventArgs e)
-        /// <summary>
-        /// 当变量num大于2时恢复应用窗口显示
-        /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
+            Opacity = 1d;
+            mouseEnterTimer.Enabled = true;
+        }
+
         public void MouseEnterTick(object sender, EventArgs e)
         {
             if (num <= 2)
-                num++;
-            else
             {
-                num = 0;
-                this.mouseEnterTimer.Enabled = false;
-                this.Opacity = 1;
+                num++;
+                return;
             }
+
+            num = 0;
+            mouseEnterTimer.Enabled = false;
+            ApplyOpacity();
         }
-        #endregion
-        private Point mouseOffset;
+
         private void Form1MouseDown(object sender, MouseEventArgs e)
         {
-            mouseOffset = new Point(-e.X, -e.Y);
+            if (e.Button == MouseButtons.Left)
+            {
+                mouseOffset = new Point(-e.X, -e.Y);
+            }
         }
+
         private void Form1MouseMove(object sender, MouseEventArgs e)
         {
             if (e.Button == MouseButtons.Left)
@@ -254,5 +396,20 @@ namespace winclock
             }
         }
 
+        protected override void WndProc(ref Message m)
+        {
+            const int WM_SYSCOMMAND = 0x0112;
+            const int SC_MINIMIZE = 0xF020;
+
+            if (_settings != null &&
+                _settings.DisableMinimize &&
+                m.Msg == WM_SYSCOMMAND &&
+                (m.WParam.ToInt64() & 0xFFF0) == SC_MINIMIZE)
+            {
+                return;
+            }
+
+            base.WndProc(ref m);
+        }
     }
 }

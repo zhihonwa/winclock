@@ -1,17 +1,45 @@
 # winclock
 
 #### 介绍
-1. 适用于Win10,Win11系统的桌面时钟小组件。
-2. 执行winclock.exe后将在您的电脑桌面右上角显示时间信息、阳历日期、阴历日期、星期以及日程提醒。
-3. winclock程序免安装，下载后点击即可执行。
-4. 运行中的winclock程序图标位于您的任务栏系统托盘（即^）中，当您需要关闭winclock程序时，只需右键单击系统托盘中该程序的图标，选择"退出"即可。
+1. 适用于 Win10、Win11 的桌面时钟小组件，窗口贴靠屏幕右上角，无边框、可拖动。
+2. 显示时间、日期、星期，可选显示农历。
+3. 提供深色设置界面，可配置时区、字体、字号、置顶、透明度、最小化限制与开机自启。
+4. 程序免安装，下载后直接运行。
+5. 运行后图标位于系统托盘，右键托盘图标或时钟窗口可选择“设置”或“退出”。
+
 ![示例图片](winclock_demo.png)
+
+#### 设置项
+- 时区：默认 UTC+8。
+- 时间字体与字号。
+- 显示日期与星期：默认启用；日期与星期可单独设置字体和字号。
+- 显示农历日期：默认关闭。
+- 始终置顶：默认启用。
+- 透明效果与透明度：默认启用，透明度 70%，可调 0%–100%。
+- 禁止窗口最小化：默认关闭。
+- 随操作系统自动启动：默认启用。
+
+设置保存在 `%APPDATA%\WinClock\settings.xml`，保存后立即生效，重启程序后继续生效。
+开机自启写入当前用户注册表 `HKCU\Software\Microsoft\Windows\CurrentVersion\Run`，无需管理员权限。
+
 #### 开发环境
 - Visual Studio 2022
-- .NET Framwork 4.8
-- c\#
+- .NET Framework 4.8
+- C#
 
-#### 使用说明
+#### 本地构建
+```powershell
+msbuild winclock.sln /p:Configuration=Release /p:Platform="Any CPU"
+```
 
-1. 下载即用，免安装
-2. 设置日程提醒方式。点击winclock.exe后，该程序会在与其相同路径下生成一个Schedule.txt的文本文件，如需设置提醒，在Schedule.txt添加提醒信息。提醒信息格式为:时间加下划线加提醒内容。示例: 22:00_休息时间到了. Schedule.txt中每一行表示一条提醒信息，桌面时钟将显示最近的一条提醒，早于当前时间的提醒将不会显示。
+生成文件：`winclock\bin\Release\winclock.exe`。
+
+#### 自动构建与发布
+仓库包含 GitHub Actions 工作流 `.github/workflows/release.yml`。推送符合 `vX.Y.Z` 格式的 tag 后自动编译并发布：
+
+```powershell
+git tag v1.0.0
+git push origin v1.0.0
+```
+
+工作流会生成 `WinClock_v1.0.0.exe`，版本号与 tag 一致，并附加到对应的 GitHub Release。

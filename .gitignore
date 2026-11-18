@@ -25,6 +25,7 @@ $RECYCLE.BIN/
 .vs*
 .vscode*
 winclock/bin/Debug/*
+winclock/bin/Release/*
 winclock/obj/*
 !winclock/bin/Debug/winclock.exe
 !winclock/bin/.gitkeep
