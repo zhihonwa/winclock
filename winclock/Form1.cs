@@ -16,6 +16,8 @@ namespace winclock
         private AppSettings _settings;
         private Font _clockFont;
         private Font _dateFont;
+        private Color _lastForeColor = Color.Empty;
+        private Color _lastBackColor = Color.Empty;
         private int num;
         private Point mouseOffset;
         private bool _positioned;
@@ -48,7 +50,7 @@ namespace winclock
             trayMenu.ForeColor = UiTheme.Text;
             trayMenu.Font = FontFactory.Create(AppSettings.DefaultClockFontFamily, 9.5f, FontStyle.Regular);
             trayMenu.Renderer = new DarkMenuRenderer();
-            trayMenu.Items.Add("显示窗口", null, delegate { ShowWindow(); });
+
             trayMenu.Items.Add("设置", null, delegate { OpenSettings(); });
             trayMenu.Items.Add(new ToolStripSeparator());
             trayMenu.Items.Add("退出", null, delegate { ExitApplication(); });
@@ -161,6 +163,8 @@ namespace winclock
 
             settings.Normalize();
             _settings = settings;
+            _lastForeColor = Color.Empty;
+            _lastBackColor = Color.Empty;
 
             int previousRight = _positioned ? Right : 0;
             Font previousClockFont = _clockFont;
@@ -169,10 +173,10 @@ namespace winclock
             _clockFont = FontFactory.Create(settings.ClockFontFamily, settings.ClockFontSize, FontStyle.Bold);
             _dateFont = FontFactory.Create(settings.DateFontFamily, settings.DateFontSize, FontStyle.Regular);
 
-            label1.Font = _clockFont;
+            timeDisplay.ApplyFont(_clockFont);
             label2.Font = _dateFont;
             label3.Font = _dateFont;
-            label1.Visible = true;
+            timeDisplay.Visible = true;
             label2.Visible = settings.ShowDate;
             label3.Visible = settings.ShowLunar;
 
@@ -220,9 +224,8 @@ namespace winclock
 
         private void UpdateClockLayout()
         {
-            Size timeSize = TextRenderer.MeasureText("00:00:00", _clockFont);
-            int timeHeight = Math.Max(_clockFont.Height + 6, timeSize.Height + 4);
-            int width = timeSize.Width;
+            int timeHeight = Math.Max(timeDisplay.RequiredHeight, _clockFont.Height + 6);
+            int width = timeDisplay.RequiredWidth;
 
             int dateHeight = Math.Max(_dateFont.Height + 6, TextRenderer.MeasureText("0000年00月00日 星期天", _dateFont).Height + 4);
             if (_settings.ShowDate)
@@ -332,23 +335,51 @@ namespace winclock
         {
             DateTime now = DateTime.UtcNow.AddHours(_settings.TimeZoneOffsetHours);
 
-            label1.Text = now.ToString("HH:mm:ss");
+            timeDisplay.SetTime(now);
 
             if (_settings.ShowDate)
             {
-                label2.Text = now.ToString("yyyy年MM月dd日") + " " + WeekDays[(int)now.DayOfWeek];
+                string dateText = now.ToString("yyyy年MM月dd日") + " " + WeekDays[(int)now.DayOfWeek];
+                if (label2.Text != dateText)
+                {
+                    label2.Text = dateText;
+                }
             }
 
             if (_settings.ShowLunar)
             {
-                label3.Text = util.SolarToChineseLunisolarDate(now);
+                string lunarText = util.SolarToChineseLunisolarDate(now);
+                if (label3.Text != lunarText)
+                {
+                    label3.Text = lunarText;
+                }
             }
 
-            int sampleY = Top + Math.Max(6, Math.Min(38, Height / 2));
-            Color[] colors = util.GetInverseColor(Left + Width / 2, sampleY);
-            label1.ForeColor = colors[0];
+            RefreshAdaptiveColors();
+        }
+
+        private void RefreshAdaptiveColors()
+        {
+            if (WindowState != FormWindowState.Normal)
+            {
+                return;
+            }
+
+            Point sample = timeDisplay.GetColorSamplePoint();
+            Color[] colors = util.GetInverseColor(sample.X, sample.Y);
+            if (colors[0] == _lastForeColor && colors[1] == _lastBackColor)
+            {
+                return;
+            }
+
+            _lastForeColor = colors[0];
+            _lastBackColor = colors[1];
+
+            timeDisplay.SetColors(colors[0], colors[1]);
             label2.ForeColor = colors[0];
+            label2.BackColor = colors[1];
             label3.ForeColor = colors[0];
+            label3.BackColor = colors[1];
             BackColor = colors[1];
             TransparencyKey = colors[1];
         }
