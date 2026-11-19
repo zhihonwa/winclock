@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Drawing;
-using System.Drawing.Drawing2D;
+
 using System.Drawing.Text;
 using System.Windows.Forms;
 
@@ -27,13 +27,11 @@ namespace winclock
         private ModernSlider _opacitySlider;
         private Label _opacityValue;
         private Label _statusLabel;
-        private PreviewPanel _preview;
         private Panel _contentHost;
         private CardPanel _timeCard;
         private CardPanel _dateCard;
         private CardPanel _appearanceCard;
         private CardPanel _behaviorCard;
-        private bool _ready;
         private bool _contentReady;
 
         public SettingsForm(AppSettings settings, Func<AppSettings, bool> apply)
@@ -48,7 +46,7 @@ namespace winclock
             PopulateFonts();
             PopulateTimeZones();
             LoadValues(settings);
-            UpdatePreview();
+
         }
 
         private void BuildUi()
@@ -56,7 +54,7 @@ namespace winclock
             Text = "WinClock 设置";
             Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
             int width = Math.Min(760, Math.Max(680, workingArea.Width - 48));
-            int height = Math.Min(740, Math.Max(620, workingArea.Height - 56));
+            int height = Math.Min(660, Math.Max(600, workingArea.Height - 56));
             ClientSize = new Size(width, height);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -72,13 +70,12 @@ namespace winclock
             TableLayoutPanel root = new TableLayoutPanel();
             root.Dock = DockStyle.Fill;
             root.ColumnCount = 1;
-            root.RowCount = 4;
+            root.RowCount = 3;
             root.BackColor = UiTheme.Background;
             root.Margin = new Padding(0);
             root.Padding = new Padding(0);
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 60f));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 90f));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 50f));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 70f));
 
@@ -88,21 +85,16 @@ namespace winclock
             BuildHeader(header);
             root.Controls.Add(header, 0, 0);
 
-            _preview = new PreviewPanel();
-            _preview.Dock = DockStyle.Fill;
-            _preview.Margin = new Padding(24, 4, 24, 6);
-            root.Controls.Add(_preview, 0, 1);
-
             _contentHost = new Panel();
             _contentHost.Dock = DockStyle.Fill;
             _contentHost.BackColor = UiTheme.Background;
             _contentHost.AutoScroll = true;
             _contentHost.Padding = new Padding(0);
             _contentHost.Resize += delegate { LayoutCards(); };
-            root.Controls.Add(_contentHost, 0, 2);
+            root.Controls.Add(_contentHost, 0, 1);
 
             Panel footer = BuildFooter();
-            root.Controls.Add(footer, 0, 3);
+            root.Controls.Add(footer, 0, 2);
 
             Controls.Add(root);
 
@@ -119,17 +111,8 @@ namespace winclock
             title.ForeColor = UiTheme.Text;
             title.BackColor = Color.Transparent;
             title.AutoSize = true;
-            title.Location = new Point(42, 8);
+            title.Location = new Point(42, 11);
             header.Controls.Add(title);
-
-            Label subtitle = new Label();
-            subtitle.Text = "桌面时钟 · 时间显示与窗口行为";
-            subtitle.Font = UiTheme.CreateFont(8.5f, FontStyle.Regular);
-            subtitle.ForeColor = UiTheme.MutedStrong;
-            subtitle.BackColor = Color.Transparent;
-            subtitle.AutoSize = true;
-            subtitle.Location = new Point(44, 34);
-            header.Controls.Add(subtitle);
 
             Panel versionHost = new Panel();
             versionHost.Dock = DockStyle.Right;
@@ -322,7 +305,7 @@ namespace winclock
                 _toolTip.SetToolTip(box, "选择日期、星期与农历使用的字体。");
             }
 
-            box.SelectedIndexChanged += delegate { UpdatePreview(); };
+
             return box;
         }
 
@@ -353,7 +336,7 @@ namespace winclock
                 _toolTip.SetToolTip(input, "日期与星期字体大小，单位为磅。农历跟随此字号。");
             }
 
-            input.ValueChanged += delegate { UpdatePreview(); };
+
             return input;
         }
 
@@ -403,7 +386,7 @@ namespace winclock
             _opacitySlider.ValueChanged += delegate
             {
                 _opacityValue.Text = _opacitySlider.Value + "%";
-                UpdatePreview();
+
             };
 
             return row;
@@ -594,7 +577,6 @@ namespace winclock
 
         private void LoadValues(AppSettings settings)
         {
-            _ready = false;
 
             SelectTimeZone(settings.TimeZoneOffsetHours);
             FillFontBox(_clockFontBox, settings.ClockFontFamily);
@@ -618,16 +600,7 @@ namespace winclock
                 bool enabled = _transparencyToggle.Checked;
                 _opacitySlider.Enabled = enabled;
                 _opacityValue.ForeColor = enabled ? UiTheme.Text : UiTheme.Muted;
-                UpdatePreview();
             };
-
-            _showDateToggle.CheckedChanged += delegate { UpdatePreview(); };
-            _showLunarToggle.CheckedChanged += delegate { UpdatePreview(); };
-            _topMostToggle.CheckedChanged += delegate { UpdatePreview(); };
-            _minimizeToggle.CheckedChanged += delegate { UpdatePreview(); };
-            _autoStartToggle.CheckedChanged += delegate { UpdatePreview(); };
-
-            _ready = true;
         }
 
         private void SelectTimeZone(int offset)
@@ -693,16 +666,6 @@ namespace winclock
             return settings;
         }
 
-        private void UpdatePreview()
-        {
-            if (!_ready || _preview == null)
-            {
-                return;
-            }
-
-            _preview.Settings = ReadSettings();
-            _preview.Invalidate();
-        }
 
         private void Commit(bool closeAfterApply)
         {
@@ -849,148 +812,4 @@ namespace winclock
         }
     }
 
-    internal sealed class PreviewPanel : Control
-    {
-        private AppSettings _settings = AppSettings.CreateDefault();
-
-        public PreviewPanel()
-        {
-            SetStyle(
-                ControlStyles.UserPaint |
-                ControlStyles.AllPaintingInWmPaint |
-                ControlStyles.OptimizedDoubleBuffer |
-                ControlStyles.ResizeRedraw,
-                true);
-            BackColor = UiTheme.Background;
-            AccessibleName = "时钟外观预览";
-            AccessibleRole = AccessibleRole.StaticText;
-        }
-
-        public AppSettings Settings
-        {
-            get { return _settings; }
-            set
-            {
-                if (value != null)
-                {
-                    _settings = value;
-                }
-            }
-        }
-
-        protected override void OnPaint(PaintEventArgs e)
-        {
-            Graphics graphics = e.Graphics;
-            graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            Rectangle rect = new Rectangle(0, 0, Width - 1, Height - 1);
-            UiDraw.FillRounded(graphics, rect, 12f, UiTheme.SurfaceAlt);
-            UiDraw.DrawRoundedBorder(graphics, rect, 12f, UiTheme.Border);
-
-            Color accent = Color.FromArgb(90, UiTheme.Accent);
-            using (Pen pen = new Pen(accent))
-            {
-                graphics.DrawLine(pen, 16, 14, 16, Height - 14);
-            }
-
-            using (Font previewFont = UiTheme.CreateFont(8f, FontStyle.Bold))
-            {
-                TextRenderer.DrawText(
-                    graphics,
-                    "实时预览",
-                    previewFont,
-                    new Point(28, 8),
-                    UiTheme.MutedStrong,
-                    TextFormatFlags.NoPrefix);
-            }
-
-            string zoneText = FormatOffset(_settings.TimeZoneOffsetHours);
-            using (Font zoneFont = UiTheme.CreateFont(8f, FontStyle.Regular))
-            {
-                TextRenderer.DrawText(
-                    graphics,
-                    zoneText,
-                    zoneFont,
-                    new Rectangle(Width - 132, 8, 116, 16),
-                    UiTheme.MutedStrong,
-                    TextFormatFlags.Right | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPrefix);
-            }
-
-            int alpha = _settings.EnableTransparency
-                ? (int)Math.Round(255.0 * _settings.OpacityPercent / 100.0)
-                : 255;
-            alpha = Math.Max(0, Math.Min(255, alpha));
-
-            DateTime now = DateTime.UtcNow.AddHours(_settings.TimeZoneOffsetHours);
-            string timeText = now.ToString("HH:mm:ss");
-            string dateText = now.ToString("yyyy年MM月dd日") + " " + WeekDay(now.DayOfWeek);
-            string lunarText = new Util().SolarToChineseLunisolarDate(now);
-
-            float clockSize = Math.Min(_settings.ClockFontSize, 18f);
-            float dateSize = Math.Min(Math.Max(_settings.DateFontSize, 8f), 8.5f);
-            using (Font clockFont = FontFactory.Create(_settings.ClockFontFamily, clockSize, FontStyle.Bold))
-            using (Font dateFont = FontFactory.Create(_settings.DateFontFamily, dateSize, FontStyle.Regular))
-            using (Brush clockBrush = new SolidBrush(Color.FromArgb(alpha, UiTheme.Text)))
-            using (Brush dateBrush = new SolidBrush(Color.FromArgb(alpha, UiTheme.Text)))
-            using (StringFormat format = new StringFormat())
-            {
-                format.Alignment = StringAlignment.Center;
-                format.LineAlignment = StringAlignment.Center;
-                format.FormatFlags = StringFormatFlags.NoWrap;
-
-                float contentTop = 22f;
-                float contentHeight = Height - contentTop - 6f;
-                float clockLine = clockFont.GetHeight(graphics);
-                float dateLine = dateFont.GetHeight(graphics);
-                float total = clockLine;
-                if (_settings.ShowDate)
-                {
-                    total += dateLine + 2f;
-                }
-
-                if (_settings.ShowLunar)
-                {
-                    total += dateLine + 2f;
-                }
-
-                if (total > contentHeight)
-                {
-                    contentTop = 26f;
-                    contentHeight = Math.Max(1f, Height - contentTop - 4f);
-                }
-
-                float y = contentTop + Math.Max(0f, (contentHeight - total) / 2f);
-                graphics.DrawString(timeText, clockFont, clockBrush, new RectangleF(12f, y, Width - 24f, clockLine), format);
-                y += clockLine;
-
-                if (_settings.ShowDate)
-                {
-                    graphics.DrawString(dateText, dateFont, dateBrush, new RectangleF(12f, y, Width - 24f, dateLine + 2f), format);
-                    y += dateLine + 2f;
-                }
-
-                if (_settings.ShowLunar)
-                {
-                    graphics.DrawString(lunarText, dateFont, dateBrush, new RectangleF(12f, y, Width - 24f, dateLine + 2f), format);
-                }
-            }
-        }
-
-        private static string FormatOffset(int offset)
-        {
-            string sign = offset < 0 ? "-" : "+";
-            return "UTC" + sign + Math.Abs(offset).ToString("00") + ":00";
-        }
-
-        private static string WeekDay(DayOfWeek day)
-        {
-            string[] names = { "星期日", "星期一", "星期二", "星期三", "星期四", "星期五", "星期六" };
-            int index = (int)day;
-            if (index < 0 || index >= names.Length)
-            {
-                return string.Empty;
-            }
-
-            return names[index];
-        }
-    }
 }
