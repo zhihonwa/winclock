@@ -12,6 +12,8 @@ namespace winclock
         private NotifyIcon notifyIcon;
         private ContextMenuStrip trayMenu;
         private ContextMenuStrip clockMenu;
+        private ToolStripMenuItem allowMoveItem;
+        private ToolStripMenuItem topMostItem;
         private readonly Util util = new Util();
         private AppSettings _settings;
         private Font _clockFont;
@@ -57,14 +59,30 @@ namespace winclock
 
             clockMenu = new ContextMenuStrip();
             clockMenu.AutoClose = true;
-            clockMenu.ShowImageMargin = false;
+            clockMenu.ShowImageMargin = true;
             clockMenu.BackColor = UiTheme.Surface;
             clockMenu.ForeColor = UiTheme.Text;
             clockMenu.Font = FontFactory.Create(AppSettings.DefaultClockFontFamily, 9.5f, FontStyle.Regular);
             clockMenu.Renderer = new DarkMenuRenderer();
+
+            allowMoveItem = new ToolStripMenuItem("允许移动", null, delegate { ToggleAllowMove(); });
+            allowMoveItem.CheckOnClick = false;
+            clockMenu.Items.Add(allowMoveItem);
+
+            topMostItem = new ToolStripMenuItem("始终置顶", null, delegate { ToggleTopMost(); });
+            topMostItem.CheckOnClick = false;
+            clockMenu.Items.Add(topMostItem);
+
+            clockMenu.Items.Add(new ToolStripSeparator());
+            clockMenu.Items.Add("放大", null, delegate { ScaleFonts(1.25f); });
+            clockMenu.Items.Add("缩小", null, delegate { ScaleFonts(0.75f); });
+            clockMenu.Items.Add(new ToolStripSeparator());
             clockMenu.Items.Add("设置", null, delegate { OpenSettings(); });
             clockMenu.Items.Add(new ToolStripSeparator());
             clockMenu.Items.Add("退出", null, delegate { ExitApplication(); });
+
+            clockMenu.Opening += delegate { UpdateMenuChecks(); };
+            UpdateMenuChecks();
 
             AssignContextMenu(this, clockMenu);
 
@@ -118,6 +136,11 @@ namespace winclock
 
         private bool ApplySettingsFromDialog(AppSettings settings)
         {
+            if (settings != null && _settings != null)
+            {
+                settings.AllowMove = _settings.AllowMove;
+            }
+
             ApplySettings(settings);
             CaptureWindowPosition(_settings);
             bool success = true;
@@ -220,6 +243,83 @@ namespace winclock
             if (IsHandleCreated)
             {
                 LabelCronTick(null, null);
+            }
+
+            UpdateMenuChecks();
+        }
+
+        private void UpdateMenuChecks()
+        {
+            if (allowMoveItem != null)
+            {
+                allowMoveItem.Checked = _settings != null && _settings.AllowMove;
+            }
+
+            if (topMostItem != null)
+            {
+                topMostItem.Checked = _settings != null && _settings.TopMost;
+            }
+        }
+
+        private void ToggleAllowMove()
+        {
+            if (_settings == null)
+            {
+                return;
+            }
+
+            _settings.AllowMove = !_settings.AllowMove;
+            mouseOffset = Point.Empty;
+            UpdateMenuChecks();
+            SaveMenuSettings();
+        }
+
+        private void ToggleTopMost()
+        {
+            if (_settings == null)
+            {
+                return;
+            }
+
+            _settings.TopMost = !_settings.TopMost;
+            TopMost = _settings.TopMost;
+            UpdateMenuChecks();
+            SaveMenuSettings();
+        }
+
+        private void ScaleFonts(float factor)
+        {
+            if (_settings == null)
+            {
+                return;
+            }
+
+            _settings.ClockFontSize = ScaleFontSize(_settings.ClockFontSize, factor);
+            _settings.DateFontSize = ScaleFontSize(_settings.DateFontSize, factor);
+            ApplySettings(_settings);
+            SaveMenuSettings();
+        }
+
+        private static float ScaleFontSize(float size, float factor)
+        {
+            float scaled = (float)Math.Round(size * factor, 1, MidpointRounding.AwayFromZero);
+            return Math.Max(6f, Math.Min(160f, scaled));
+        }
+
+        private void SaveMenuSettings()
+        {
+            if (_settings == null)
+            {
+                return;
+            }
+
+            CaptureWindowPosition(_settings);
+            try
+            {
+                SettingsStore.Save(_settings);
+            }
+            catch (Exception)
+            {
             }
         }
 
@@ -498,7 +598,7 @@ namespace winclock
 
         private void Form1MouseDown(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button == MouseButtons.Left && _settings != null && _settings.AllowMove)
             {
                 mouseOffset = new Point(-e.X, -e.Y);
             }
@@ -506,7 +606,7 @@ namespace winclock
 
         private void Form1MouseMove(object sender, MouseEventArgs e)
         {
-            if (e.Button == MouseButtons.Left)
+            if (e.Button == MouseButtons.Left && _settings != null && _settings.AllowMove)
             {
                 Point mousePos = Control.MousePosition;
                 mousePos.Offset(mouseOffset.X, mouseOffset.Y);

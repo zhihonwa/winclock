@@ -141,6 +141,8 @@ namespace winclock
 
     internal sealed class DarkMenuRenderer : ToolStripProfessionalRenderer
     {
+        private static readonly Font CheckGlyphFont = new Font("Segoe UI Symbol", 9f, FontStyle.Bold);
+
         public DarkMenuRenderer()
             : base(new DarkColorTable())
         {
@@ -168,6 +170,31 @@ namespace winclock
         {
             e.TextColor = e.Item.Enabled ? UiTheme.Text : UiTheme.Muted;
             base.OnRenderItemText(e);
+        }
+
+        protected override void OnRenderItemCheck(ToolStripItemImageRenderEventArgs e)
+        {
+            Rectangle bounds = e.ImageRectangle;
+            if (bounds.Height <= 0)
+            {
+                bounds = new Rectangle(bounds.X, 0, bounds.Width, e.Item.Height);
+            }
+
+            if (bounds.Width <= 0)
+            {
+                bounds = new Rectangle(0, 0, 22, e.Item.Height);
+            }
+
+            TextRenderer.DrawText(
+                e.Graphics,
+                "✔",
+                CheckGlyphFont,
+                bounds,
+                UiTheme.Accent,
+                TextFormatFlags.HorizontalCenter |
+                TextFormatFlags.VerticalCenter |
+                TextFormatFlags.NoPadding |
+                TextFormatFlags.NoPrefix);
         }
 
         protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e)

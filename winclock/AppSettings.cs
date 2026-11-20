@@ -22,6 +22,7 @@ namespace winclock
         public float DateFontSize { get; set; } = 12f;
         public bool ShowLunar { get; set; } = false;
         public bool TopMost { get; set; } = true;
+        public bool AllowMove { get; set; } = false;
         public bool EnableTransparency { get; set; } = true;
         public int OpacityPercent { get; set; } = 70;
         public bool DisableMinimize { get; set; } = false;
