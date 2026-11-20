@@ -27,6 +27,7 @@ namespace winclock
         private ToggleSwitch _transparencyToggle;
         private ToggleSwitch _minimizeToggle;
         private ToggleSwitch _autoStartToggle;
+        private ToggleSwitch _rememberPositionToggle;
         private ModernSlider _opacitySlider;
         private Label _opacityValue;
         private Label _statusLabel;
@@ -239,7 +240,9 @@ namespace winclock
             _autoStartToggle = BuildToggle("随操作系统自动启动");
             _autoStartToggle.AccessibleName = "随操作系统自动启动";
             AddToBody(body, CreateToggleRow("随操作系统自动启动", _autoStartToggle), 8);
-            AddToBody(body, BuildHint("开机自启写入当前用户启动项，无需管理员权限。", 300), 0);
+            _rememberPositionToggle = BuildToggle("记住最后位置");
+            _rememberPositionToggle.AccessibleName = "记住最后位置";
+            AddToBody(body, CreateToggleRow("记住最后位置", _rememberPositionToggle), 0);
 
             _contentHost.Controls.Add(_timeCard);
             _contentHost.Controls.Add(_dateCard);
@@ -601,6 +604,7 @@ namespace winclock
             _opacityValue.Text = settings.OpacityPercent + "%";
             _minimizeToggle.Checked = settings.DisableMinimize;
             _autoStartToggle.Checked = settings.AutoStart;
+            _rememberPositionToggle.Checked = settings.RememberLastPosition;
 
             _opacitySlider.Enabled = settings.EnableTransparency;
             _opacityValue.ForeColor = settings.EnableTransparency ? UiTheme.Text : UiTheme.Muted;
@@ -672,6 +676,7 @@ namespace winclock
             settings.OpacityPercent = _opacitySlider.Value;
             settings.DisableMinimize = _minimizeToggle.Checked;
             settings.AutoStart = _autoStartToggle.Checked;
+            settings.RememberLastPosition = _rememberPositionToggle.Checked;
             settings.Normalize();
             return settings;
         }

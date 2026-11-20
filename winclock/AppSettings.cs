@@ -26,6 +26,10 @@ namespace winclock
         public int OpacityPercent { get; set; } = 70;
         public bool DisableMinimize { get; set; } = false;
         public bool AutoStart { get; set; } = true;
+        public bool RememberLastPosition { get; set; } = true;
+        public int WindowX { get; set; }
+        public int WindowY { get; set; }
+        public string ScreenDeviceName { get; set; }
 
         public static AppSettings CreateDefault()
         {

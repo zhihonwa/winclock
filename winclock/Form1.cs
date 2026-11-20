@@ -119,6 +119,7 @@ namespace winclock
         private bool ApplySettingsFromDialog(AppSettings settings)
         {
             ApplySettings(settings);
+            CaptureWindowPosition(_settings);
             bool success = true;
 
             try
@@ -319,11 +320,97 @@ namespace winclock
             {
             }
 
-            Screen screen = Screen.PrimaryScreen;
-            Left = screen.WorkingArea.Right - Width - ScreenMargin;
-            Top = screen.WorkingArea.Top + ScreenMargin;
-            _positioned = true;
+            RestoreWindowPosition();
+            UpdateClockLayout();
+            ClampWindowToWorkingArea();
             LabelCronTick(null, null);
+        }
+
+        private void RestoreWindowPosition()
+        {
+            if (_settings != null &&
+                _settings.RememberLastPosition &&
+                !string.IsNullOrEmpty(_settings.ScreenDeviceName))
+            {
+                Point saved = new Point(_settings.WindowX, _settings.WindowY);
+                Screen screen = FindScreen(_settings.ScreenDeviceName, saved);
+                if (screen != null)
+                {
+                    Location = ClampToWorkingArea(screen, saved, Size);
+                    _positioned = true;
+                    return;
+                }
+            }
+
+            Screen primary = Screen.PrimaryScreen;
+            Left = primary.WorkingArea.Right - Width - ScreenMargin;
+            Top = primary.WorkingArea.Top + ScreenMargin;
+            _positioned = true;
+        }
+
+        private static Screen FindScreen(string deviceName, Point location)
+        {
+            foreach (Screen screen in Screen.AllScreens)
+            {
+                if (string.Equals(screen.DeviceName, deviceName, StringComparison.OrdinalIgnoreCase))
+                {
+                    return screen;
+                }
+            }
+
+            return Screen.FromPoint(location);
+        }
+
+        private void ClampWindowToWorkingArea()
+        {
+            Point location = ClampToWorkingArea(Screen.FromControl(this), Location, Size);
+            if (location != Location)
+            {
+                Location = location;
+            }
+        }
+
+        private static Point ClampToWorkingArea(Screen screen, Point location, Size size)
+        {
+            Rectangle area = screen.WorkingArea;
+            int left = Math.Max(area.Left, Math.Min(location.X, area.Right - size.Width));
+            int top = Math.Max(area.Top, Math.Min(location.Y, area.Bottom - size.Height));
+            return new Point(left, top);
+        }
+
+        private void CaptureWindowPosition(AppSettings settings)
+        {
+            if (settings == null)
+            {
+                return;
+            }
+
+            Rectangle bounds = WindowState == FormWindowState.Minimized ? RestoreBounds : Bounds;
+            if (bounds.Width <= 0 || bounds.Height <= 0)
+            {
+                return;
+            }
+
+            settings.WindowX = bounds.X;
+            settings.WindowY = bounds.Y;
+            settings.ScreenDeviceName = Screen.FromRectangle(bounds).DeviceName;
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_settings != null)
+            {
+                CaptureWindowPosition(_settings);
+                try
+                {
+                    SettingsStore.Save(_settings);
+                }
+                catch (Exception)
+                {
+                }
+            }
+
+            base.OnFormClosing(e);
         }
 
         private static readonly string[] WeekDays =
