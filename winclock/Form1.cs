@@ -12,8 +12,8 @@ namespace winclock
         private NotifyIcon notifyIcon;
         private ContextMenuStrip trayMenu;
         private ContextMenuStrip clockMenu;
-        private ToolStripMenuItem allowMoveItem;
-        private ToolStripMenuItem topMostItem;
+        private MenuBinding trayMenuBinding;
+        private MenuBinding clockMenuBinding;
         private readonly Util util = new Util();
         private AppSettings _settings;
         private Font _clockFont;
@@ -45,45 +45,13 @@ namespace winclock
 
         private void InitializeMenus()
         {
-            trayMenu = new ContextMenuStrip();
-            trayMenu.AutoClose = true;
-            trayMenu.ShowImageMargin = false;
-            trayMenu.BackColor = UiTheme.Surface;
-            trayMenu.ForeColor = UiTheme.Text;
-            trayMenu.Font = FontFactory.Create(AppSettings.DefaultClockFontFamily, 9.5f, FontStyle.Regular);
-            trayMenu.Renderer = new DarkMenuRenderer();
+            trayMenuBinding = CreateMenu();
+            trayMenu = trayMenuBinding.Menu;
 
-            trayMenu.Items.Add("设置", null, delegate { OpenSettings(); });
-            trayMenu.Items.Add(new ToolStripSeparator());
-            trayMenu.Items.Add("退出", null, delegate { ExitApplication(); });
+            clockMenuBinding = CreateMenu();
+            clockMenu = clockMenuBinding.Menu;
 
-            clockMenu = new ContextMenuStrip();
-            clockMenu.AutoClose = true;
-            clockMenu.ShowImageMargin = true;
-            clockMenu.BackColor = UiTheme.Surface;
-            clockMenu.ForeColor = UiTheme.Text;
-            clockMenu.Font = FontFactory.Create(AppSettings.DefaultClockFontFamily, 9.5f, FontStyle.Regular);
-            clockMenu.Renderer = new DarkMenuRenderer();
-
-            allowMoveItem = new ToolStripMenuItem("允许移动", null, delegate { ToggleAllowMove(); });
-            allowMoveItem.CheckOnClick = false;
-            clockMenu.Items.Add(allowMoveItem);
-
-            topMostItem = new ToolStripMenuItem("始终置顶", null, delegate { ToggleTopMost(); });
-            topMostItem.CheckOnClick = false;
-            clockMenu.Items.Add(topMostItem);
-
-            clockMenu.Items.Add(new ToolStripSeparator());
-            clockMenu.Items.Add("放大", null, delegate { ScaleFonts(1.25f); });
-            clockMenu.Items.Add("缩小", null, delegate { ScaleFonts(0.75f); });
-            clockMenu.Items.Add(new ToolStripSeparator());
-            clockMenu.Items.Add("设置", null, delegate { OpenSettings(); });
-            clockMenu.Items.Add(new ToolStripSeparator());
-            clockMenu.Items.Add("退出", null, delegate { ExitApplication(); });
-
-            clockMenu.Opening += delegate { UpdateMenuChecks(); };
             UpdateMenuChecks();
-
             AssignContextMenu(this, clockMenu);
 
             notifyIcon = new NotifyIcon();
@@ -92,6 +60,43 @@ namespace winclock
             notifyIcon.Visible = true;
             notifyIcon.ContextMenuStrip = trayMenu;
             notifyIcon.DoubleClick += delegate { ShowWindow(); };
+        }
+
+        private MenuBinding CreateMenu()
+        {
+            MenuBinding binding = new MenuBinding();
+
+            ContextMenuStrip menu = new ContextMenuStrip();
+            menu.AutoClose = true;
+            menu.ShowImageMargin = true;
+            menu.BackColor = UiTheme.Surface;
+            menu.ForeColor = UiTheme.Text;
+            menu.Font = FontFactory.Create(AppSettings.DefaultClockFontFamily, 9.5f, FontStyle.Regular);
+            menu.Renderer = new DarkMenuRenderer();
+            menu.Opening += delegate { UpdateMenuChecks(); };
+
+            binding.Menu = menu;
+            binding.AllowMoveItem = CreateToggleItem("允许移动", delegate { ToggleAllowMove(); });
+            binding.TopMostItem = CreateToggleItem("始终置顶", delegate { ToggleTopMost(); });
+
+            menu.Items.Add(binding.AllowMoveItem);
+            menu.Items.Add(binding.TopMostItem);
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add("放大", null, delegate { ScaleFonts(1.25f); });
+            menu.Items.Add("缩小", null, delegate { ScaleFonts(0.75f); });
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add("设置", null, delegate { OpenSettings(); });
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add("退出", null, delegate { ExitApplication(); });
+
+            return binding;
+        }
+
+        private static ToolStripMenuItem CreateToggleItem(string text, EventHandler onClick)
+        {
+            ToolStripMenuItem item = new ToolStripMenuItem(text, null, onClick);
+            item.CheckOnClick = false;
+            return item;
         }
 
         private static void AssignContextMenu(Control control, ContextMenuStrip menu)
@@ -250,15 +255,19 @@ namespace winclock
 
         private void UpdateMenuChecks()
         {
-            if (allowMoveItem != null)
+            ApplyMenuState(trayMenuBinding);
+            ApplyMenuState(clockMenuBinding);
+        }
+
+        private void ApplyMenuState(MenuBinding binding)
+        {
+            if (binding == null)
             {
-                allowMoveItem.Checked = _settings != null && _settings.AllowMove;
+                return;
             }
 
-            if (topMostItem != null)
-            {
-                topMostItem.Checked = _settings != null && _settings.TopMost;
-            }
+            binding.AllowMoveItem.Checked = _settings != null && _settings.AllowMove;
+            binding.TopMostItem.Checked = _settings != null && _settings.TopMost;
         }
 
         private void ToggleAllowMove()
@@ -628,6 +637,15 @@ namespace winclock
             }
 
             base.WndProc(ref m);
+        }
+
+        private sealed class MenuBinding
+        {
+            public ContextMenuStrip Menu { get; set; }
+
+            public ToolStripMenuItem AllowMoveItem { get; set; }
+
+            public ToolStripMenuItem TopMostItem { get; set; }
         }
     }
 }
