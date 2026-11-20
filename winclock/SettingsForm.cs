@@ -9,6 +9,9 @@ namespace winclock
 {
     public sealed class SettingsForm : Form
     {
+        private const int HeaderHeight = 50;
+        private const int FooterHeight = 70;
+
         private readonly Func<AppSettings, bool> _apply;
         private readonly List<string> _fontNames = new List<string>();
         private readonly ToolTip _toolTip = new ToolTip();
@@ -54,7 +57,7 @@ namespace winclock
             Text = "WinClock 设置";
             Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
             int width = Math.Min(760, Math.Max(680, workingArea.Width - 48));
-            int height = Math.Min(660, Math.Max(600, workingArea.Height - 56));
+            int height = Math.Min(620, Math.Max(600, workingArea.Height - 56));
             ClientSize = new Size(width, height);
             FormBorderStyle = FormBorderStyle.FixedDialog;
             MaximizeBox = false;
@@ -75,9 +78,9 @@ namespace winclock
             root.Margin = new Padding(0);
             root.Padding = new Padding(0);
             root.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 50f));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, HeaderHeight));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100f));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 70f));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, FooterHeight));
 
             HeaderPanel header = new HeaderPanel();
             header.Dock = DockStyle.Fill;
@@ -90,6 +93,7 @@ namespace winclock
             _contentHost.BackColor = UiTheme.Background;
             _contentHost.AutoScroll = true;
             _contentHost.Padding = new Padding(0);
+            _contentHost.Margin = new Padding(0);
             _contentHost.Resize += delegate { LayoutCards(); };
             root.Controls.Add(_contentHost, 0, 1);
 
@@ -200,12 +204,12 @@ namespace winclock
         {
             TableLayoutPanel body;
 
-            _timeCard = CreateCard("时间与字体", "时区、时间字体与字号", out body);
+            _timeCard = CreateCard("时间与字体", out body);
             AddToBody(body, CreateField("时区", BuildTimeZoneBox()), 8);
             AddToBody(body, CreateField("时间字体", BuildFontBox(true)), 8);
             AddToBody(body, CreateField("时间字号（磅）", BuildSizeBox(true)), 0);
 
-            _appearanceCard = CreateCard("外观", "置顶、透明与视觉呈现", out body);
+            _appearanceCard = CreateCard("外观", out body);
             _topMostToggle = BuildToggle("始终置顶");
             _topMostToggle.AccessibleName = "始终置顶";
             AddToBody(body, CreateToggleRow("始终置顶", _topMostToggle), 8);
@@ -218,7 +222,7 @@ namespace winclock
             Label opacityHint = BuildHint("0% 时窗口完全透明，可从系统托盘的“设置”恢复。", 300);
             AddToBody(body, opacityHint, 0);
 
-            _dateCard = CreateCard("日期与农历", "日期、星期与农历的显示方式", out body);
+            _dateCard = CreateCard("日期与农历", out body);
             _showDateToggle = BuildToggle("显示日期与星期");
             _showDateToggle.AccessibleName = "显示日期与星期";
             AddToBody(body, CreateToggleRow("显示日期与星期", _showDateToggle), 8);
@@ -228,7 +232,7 @@ namespace winclock
             _showLunarToggle.AccessibleName = "显示农历日期";
             AddToBody(body, CreateToggleRow("显示农历日期", _showLunarToggle), 0);
 
-            _behaviorCard = CreateCard("行为", "最小化与随系统启动", out body);
+            _behaviorCard = CreateCard("行为", out body);
             _minimizeToggle = BuildToggle("禁止窗口最小化");
             _minimizeToggle.AccessibleName = "禁止窗口最小化";
             AddToBody(body, CreateToggleRow("禁止窗口最小化", _minimizeToggle), 8);
@@ -243,7 +247,7 @@ namespace winclock
             _contentHost.Controls.Add(_behaviorCard);
         }
 
-        private CardPanel CreateCard(string title, string subtitle, out TableLayoutPanel body)
+        private CardPanel CreateCard(string title, out TableLayoutPanel body)
         {
             CardPanel card = new CardPanel();
             card.Dock = DockStyle.None;
@@ -255,7 +259,7 @@ namespace winclock
             body.AutoSizeMode = AutoSizeMode.GrowAndShrink;
             body.ColumnCount = 1;
             body.BackColor = Color.Transparent;
-            body.Padding = new Padding(16, 10, 16, 12);
+            body.Padding = new Padding(16, 8, 16, 10);
             body.Margin = new Padding(0);
             body.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
             card.Controls.Add(body);
@@ -266,15 +270,7 @@ namespace winclock
             heading.ForeColor = UiTheme.Text;
             heading.BackColor = Color.Transparent;
             heading.AutoSize = true;
-            AddToBody(body, heading, 2);
-
-            Label caption = new Label();
-            caption.Text = subtitle;
-            caption.Font = UiTheme.CreateFont(8.5f, FontStyle.Regular);
-            caption.ForeColor = UiTheme.Muted;
-            caption.BackColor = Color.Transparent;
-            caption.AutoSize = true;
-            AddToBody(body, caption, 6);
+            AddToBody(body, heading, 8);
 
             return card;
         }
@@ -514,6 +510,20 @@ namespace winclock
 
             int totalHeight = secondTop + secondRowHeight + 12;
             _contentHost.AutoScrollMinSize = new Size(0, totalHeight);
+            FitWindowHeight(totalHeight);
+        }
+
+        private void FitWindowHeight(int contentHeight)
+        {
+            int desired = HeaderHeight + contentHeight + FooterHeight + 2;
+            Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
+            int chrome = Height - ClientSize.Height;
+            int maximum = Math.Max(HeaderHeight + FooterHeight + 120, workingArea.Height - chrome - 16);
+            desired = Math.Min(desired, maximum);
+            if (desired != ClientSize.Height)
+            {
+                ClientSize = new Size(ClientSize.Width, desired);
+            }
         }
 
         private int LayoutCard(CardPanel card, int x, int y, int width)
