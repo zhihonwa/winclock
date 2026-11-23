@@ -661,6 +661,105 @@ namespace winclock
         }
     }
 
+    internal sealed class ColorSwatch : Control
+    {
+        private bool _selected;
+        private bool _hover;
+
+        public Color Value { get; set; }
+
+        public bool Selected
+        {
+            get { return _selected; }
+            set
+            {
+                if (_selected == value)
+                {
+                    return;
+                }
+
+                _selected = value;
+                Invalidate();
+            }
+        }
+
+        public ColorSwatch()
+        {
+            SetStyle(
+                ControlStyles.UserPaint |
+                ControlStyles.AllPaintingInWmPaint |
+                ControlStyles.OptimizedDoubleBuffer |
+                ControlStyles.ResizeRedraw |
+                ControlStyles.SupportsTransparentBackColor,
+                true);
+            Size = new Size(26, 26);
+            Cursor = Cursors.Hand;
+            BackColor = Color.Transparent;
+            TabStop = false;
+            AccessibleRole = AccessibleRole.PushButton;
+        }
+
+        protected override void OnPaint(PaintEventArgs e)
+        {
+            Graphics graphics = e.Graphics;
+            graphics.SmoothingMode = SmoothingMode.AntiAlias;
+
+            int size = Math.Min(Width, Height);
+            Rectangle bounds = new Rectangle((Width - size) / 2, (Height - size) / 2, size - 1, size - 1);
+            if (_selected)
+            {
+                using (Pen ring = new Pen(UiTheme.Accent, 2f))
+                {
+                    graphics.DrawEllipse(ring, bounds);
+                }
+            }
+            else if (_hover)
+            {
+                using (Pen ring = new Pen(UiTheme.Muted, 1f))
+                {
+                    graphics.DrawEllipse(ring, bounds);
+                }
+            }
+
+            Rectangle circle = Rectangle.Inflate(bounds, -4, -4);
+            using (SolidBrush brush = new SolidBrush(Value))
+            {
+                graphics.FillEllipse(brush, circle);
+            }
+
+            using (Pen outline = new Pen(Color.FromArgb(110, 255, 255, 255)))
+            {
+                graphics.DrawEllipse(outline, circle);
+            }
+        }
+
+        protected override void OnMouseEnter(EventArgs e)
+        {
+            base.OnMouseEnter(e);
+            _hover = true;
+            Invalidate();
+        }
+
+        protected override void OnMouseLeave(EventArgs e)
+        {
+            base.OnMouseLeave(e);
+            _hover = false;
+            Invalidate();
+        }
+    }
+
+    internal sealed class DarkTextBox : TextBox
+    {
+        public DarkTextBox()
+        {
+            BorderStyle = BorderStyle.FixedSingle;
+            BackColor = UiTheme.SurfaceAlt;
+            ForeColor = UiTheme.Text;
+            Font = UiTheme.CreateFont(9.5f, FontStyle.Regular);
+            MaxLength = 7;
+        }
+    }
+
     internal sealed class HeaderPanel : Panel
     {
         public HeaderPanel()

@@ -116,25 +116,88 @@ private const int GWL_EXSTYLE = (-20);
 
         #region public string SolarToChineseLunisolarDate(DateTime solarDateTime)
         /// <summary>
-        /// 阳历日期转阴历日期
+        /// 阳历日期转阴历日期（长格式：农历乙巳（蛇）2025年十月十五）
         /// </summary>
 
         public string SolarToChineseLunisolarDate(DateTime solarDateTime)
         {
-            int year = _calendar.GetYear(solarDateTime);
-            int month = _calendar.GetMonth(solarDateTime);
-            int day = _calendar.GetDayOfMonth(solarDateTime);
-            int leapMonth = _calendar.GetLeapMonth(year);
-            return string.Format("农历{0}{1}（{2}）{3}年{4}{5}月{6}{7}"
+            int year;
+            int month;
+            int day;
+            bool isLeapMonth;
+            string monthName;
+            GetLunisolarParts(solarDateTime, out year, out month, out day, out isLeapMonth, out monthName);
+            return string.Format("农历{0}{1}（{2}）{3}年{4}{5}月{6}"
                                 , "甲乙丙丁戊己庚辛壬癸"[(year - 4) % 10]
                                 , "子丑寅卯辰巳午未申酉戌亥"[(year - 4) % 12]
                                 , "鼠牛虎兔龙蛇马羊猴鸡狗猪"[(year - 4) % 12]
                                 , year
-                                , month == leapMonth ? "闰" : ""
-                                , "无正二三四五六七八九十冬腊"[leapMonth > 0 && leapMonth <= month ? month - 1 : month]
-                                , "初十廿三"[day / 10]
-                                , "日一二三四五六七八九"[day % 10]
+                                , isLeapMonth ? "闰" : ""
+                                , monthName
+                                , GetLunarDayName(day)
                                 );
+        }
+
+        /// <summary>
+        /// 阳历日期转阴历日期（短格式：十月十五、闰六月初一）
+        /// </summary>
+        public string SolarToChineseLunisolarShortDate(DateTime solarDateTime)
+        {
+            int year;
+            int month;
+            int day;
+            bool isLeapMonth;
+            string monthName;
+            GetLunisolarParts(solarDateTime, out year, out month, out day, out isLeapMonth, out monthName);
+            return (isLeapMonth ? "闰" : "") + monthName + "月" + GetLunarDayName(day);
+        }
+
+        private static void GetLunisolarParts(
+            DateTime solarDateTime,
+            out int year,
+            out int month,
+            out int day,
+            out bool isLeapMonth,
+            out string monthName)
+        {
+            year = _calendar.GetYear(solarDateTime);
+            month = _calendar.GetMonth(solarDateTime);
+            day = _calendar.GetDayOfMonth(solarDateTime);
+            int leapMonth = _calendar.GetLeapMonth(year);
+            isLeapMonth = leapMonth > 0 && month == leapMonth;
+            int nameIndex = leapMonth > 0 && leapMonth <= month ? month - 1 : month;
+            monthName = "无正二三四五六七八九十冬腊"[nameIndex].ToString();
+        }
+
+        private static string GetLunarDayName(int day)
+        {
+            const string digits = "一二三四五六七八九十";
+            if (day == 10)
+            {
+                return "初十";
+            }
+
+            if (day == 20)
+            {
+                return "二十";
+            }
+
+            if (day == 30)
+            {
+                return "三十";
+            }
+
+            if (day < 10)
+            {
+                return "初" + digits[day - 1];
+            }
+
+            if (day < 20)
+            {
+                return "十" + digits[day % 10 - 1];
+            }
+
+            return "廿" + digits[day % 10 - 1];
         }
         #endregion
 
@@ -153,31 +216,19 @@ private const int GWL_EXSTYLE = (-20);
         }
         #endregion
 
-        #region public Color[] GetInverseColor(int X, int Y)
+        #region public Color GetScreenColor(int X, int Y)
         /// <summary>
-        /// SetColor[0]  X,Y点颜色的反色
-        /// SetColor[1]  X,Y点颜色的反色的相近色，作为背景剔除
-        /// SetColor[2]  X,Y点颜色的反色偏红色
+        /// 获取屏幕指定像素的颜色，用于设置透明键，使时钟背景与桌面完全融合
         /// </summary>
-        /// <param name="X"></param>
-        /// <param name="Y"></param>
-        /// <returns></returns>
-        /// 
-        public Color[] GetInverseColor(int X, int Y)
+        public Color GetScreenColor(int X, int Y)
         {
-            Color[] _OutColor = new Color[3];
             IntPtr hdc = GetDC(IntPtr.Zero);
             uint pixel = GetPixel(hdc, X, Y);
             ReleaseDC(IntPtr.Zero, hdc);
-            int R = 255 - ((int)(pixel & 0x000000FF)),
-                G = 255 - ((int)(pixel & 0x0000FF00) >> 8),
-                B = 255 - ((int)(pixel & 0x00FF0000) >> 16);
-            _OutColor[0] = Color.FromArgb(R, G, B);
-            if (R < 5)
-                R += 6;
-            _OutColor[1] = Color.FromArgb(R - 5, G, B);
-            _OutColor[2] = Color.FromArgb(255, G / 2, B / 2);
-            return _OutColor;
+            return Color.FromArgb(
+                (int)(pixel & 0x000000FF),
+                (int)((pixel & 0x0000FF00) >> 8),
+                (int)((pixel & 0x00FF0000) >> 16));
         }
         #endregion
 

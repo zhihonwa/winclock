@@ -18,7 +18,7 @@ namespace winclock
         private AppSettings _settings;
         private Font _clockFont;
         private Font _dateFont;
-        private Color _lastForeColor = Color.Empty;
+        private Color _textColor = Color.White;
         private Color _lastBackColor = Color.Empty;
         private int num;
         private Point mouseOffset;
@@ -78,9 +78,11 @@ namespace winclock
             binding.Menu = menu;
             binding.AllowMoveItem = CreateToggleItem("允许移动", delegate { ToggleAllowMove(); });
             binding.TopMostItem = CreateToggleItem("始终置顶", delegate { ToggleTopMost(); });
+            binding.HideSecondsItem = CreateToggleItem("隐藏秒数", delegate { ToggleHideSeconds(); });
 
             menu.Items.Add(binding.AllowMoveItem);
             menu.Items.Add(binding.TopMostItem);
+            menu.Items.Add(binding.HideSecondsItem);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add("放大", null, delegate { ScaleFonts(1.25f); });
             menu.Items.Add("缩小", null, delegate { ScaleFonts(0.75f); });
@@ -144,6 +146,7 @@ namespace winclock
             if (settings != null && _settings != null)
             {
                 settings.AllowMove = _settings.AllowMove;
+                settings.HideSeconds = _settings.HideSeconds;
             }
 
             ApplySettings(settings);
@@ -192,7 +195,7 @@ namespace winclock
 
             settings.Normalize();
             _settings = settings;
-            _lastForeColor = Color.Empty;
+            _textColor = TextColorPalette.Parse(settings.ClockTextColor);
             _lastBackColor = Color.Empty;
 
             int previousRight = _positioned ? Right : 0;
@@ -203,8 +206,12 @@ namespace winclock
             _dateFont = FontFactory.Create(settings.DateFontFamily, settings.DateFontSize, FontStyle.Regular);
 
             timeDisplay.ApplyFont(_clockFont);
+            timeDisplay.SetShowSeconds(!settings.HideSeconds);
+            timeDisplay.SetForeColor(_textColor);
             label2.Font = _dateFont;
             label3.Font = _dateFont;
+            label2.ForeColor = _textColor;
+            label3.ForeColor = _textColor;
             timeDisplay.Visible = true;
             label2.Visible = settings.ShowDate;
             label3.Visible = settings.ShowLunar;
@@ -268,6 +275,7 @@ namespace winclock
 
             binding.AllowMoveItem.Checked = _settings != null && _settings.AllowMove;
             binding.TopMostItem.Checked = _settings != null && _settings.TopMost;
+            binding.HideSecondsItem.Checked = _settings != null && _settings.HideSeconds;
         }
 
         private void ToggleAllowMove()
@@ -293,6 +301,18 @@ namespace winclock
             _settings.TopMost = !_settings.TopMost;
             TopMost = _settings.TopMost;
             UpdateMenuChecks();
+            SaveMenuSettings();
+        }
+
+        private void ToggleHideSeconds()
+        {
+            if (_settings == null)
+            {
+                return;
+            }
+
+            _settings.HideSeconds = !_settings.HideSeconds;
+            ApplySettings(_settings);
             SaveMenuSettings();
         }
 
@@ -337,15 +357,18 @@ namespace winclock
             int timeHeight = Math.Max(timeDisplay.RequiredHeight, _clockFont.Height + 6);
             int width = timeDisplay.RequiredWidth;
 
-            int dateHeight = Math.Max(_dateFont.Height + 6, TextRenderer.MeasureText("0000年00月00日 星期天", _dateFont).Height + 4);
+            string dateSample = _settings.HideSeconds ? "00-00 星期天" : "0000年00月00日 星期天";
+            string lunarSample = _settings.HideSeconds ? "闰正月初十" : "农历甲乙（鼠）0000年闰正月初十";
+
+            int dateHeight = Math.Max(_dateFont.Height + 6, TextRenderer.MeasureText(dateSample, _dateFont).Height + 4);
             if (_settings.ShowDate)
             {
-                width = Math.Max(width, TextRenderer.MeasureText("0000年00月00日 星期天", _dateFont).Width);
+                width = Math.Max(width, TextRenderer.MeasureText(dateSample, _dateFont).Width);
             }
 
             if (_settings.ShowLunar)
             {
-                width = Math.Max(width, TextRenderer.MeasureText("农历甲乙（鼠）0000年闰正月初十", _dateFont).Width);
+                width = Math.Max(width, TextRenderer.MeasureText(lunarSample, _dateFont).Width);
             }
 
             width = Math.Max(240, width + 24);
@@ -535,7 +558,7 @@ namespace winclock
 
             if (_settings.ShowDate)
             {
-                string dateText = now.ToString("yyyy年MM月dd日") + " " + WeekDays[(int)now.DayOfWeek];
+                string dateText = FormatDateText(now);
                 if (label2.Text != dateText)
                 {
                     label2.Text = dateText;
@@ -544,17 +567,30 @@ namespace winclock
 
             if (_settings.ShowLunar)
             {
-                string lunarText = util.SolarToChineseLunisolarDate(now);
+                string lunarText = _settings.HideSeconds
+                    ? util.SolarToChineseLunisolarShortDate(now)
+                    : util.SolarToChineseLunisolarDate(now);
                 if (label3.Text != lunarText)
                 {
                     label3.Text = lunarText;
                 }
             }
 
-            RefreshAdaptiveColors();
+            RefreshTransparentBackColor();
         }
 
-        private void RefreshAdaptiveColors()
+        private string FormatDateText(DateTime now)
+        {
+            string week = WeekDays[(int)now.DayOfWeek];
+            if (_settings.HideSeconds)
+            {
+                return now.ToString("MM-dd") + " " + week;
+            }
+
+            return now.ToString("yyyy年MM月dd日") + " " + week;
+        }
+
+        private void RefreshTransparentBackColor()
         {
             if (WindowState != FormWindowState.Normal)
             {
@@ -562,22 +598,51 @@ namespace winclock
             }
 
             Point sample = timeDisplay.GetColorSamplePoint();
-            Color[] colors = util.GetInverseColor(sample.X, sample.Y);
-            if (colors[0] == _lastForeColor && colors[1] == _lastBackColor)
+            Color backColor = EnsureTransparentKey(util.GetScreenColor(sample.X, sample.Y), _textColor);
+            if (backColor == _lastBackColor)
             {
                 return;
             }
 
-            _lastForeColor = colors[0];
-            _lastBackColor = colors[1];
+            _lastBackColor = backColor;
 
-            timeDisplay.SetColors(colors[0], colors[1]);
-            label2.ForeColor = colors[0];
-            label2.BackColor = colors[1];
-            label3.ForeColor = colors[0];
-            label3.BackColor = colors[1];
-            BackColor = colors[1];
-            TransparencyKey = colors[1];
+            timeDisplay.SetBackColor(backColor);
+            label2.BackColor = backColor;
+            label3.BackColor = backColor;
+            BackColor = backColor;
+            TransparencyKey = backColor;
+        }
+
+        private static Color EnsureTransparentKey(Color background, Color textColor)
+        {
+            if (background.ToArgb() != textColor.ToArgb())
+            {
+                return background;
+            }
+
+            int r = background.R;
+            int g = background.G;
+            int b = background.B;
+            if (r < 255)
+            {
+                r++;
+            }
+            else if (g < 255)
+            {
+                g++;
+            }
+            else if (b < 255)
+            {
+                b++;
+            }
+            else
+            {
+                r = 254;
+                g = 254;
+                b = 254;
+            }
+
+            return Color.FromArgb(r, g, b);
         }
 
         private void Form1MouseEnter(object sender, EventArgs e)
@@ -646,6 +711,8 @@ namespace winclock
             public ToolStripMenuItem AllowMoveItem { get; set; }
 
             public ToolStripMenuItem TopMostItem { get; set; }
+
+            public ToolStripMenuItem HideSecondsItem { get; set; }
         }
     }
 }

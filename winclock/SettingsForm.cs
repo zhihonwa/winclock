@@ -21,6 +21,8 @@ namespace winclock
         private DarkComboBox _dateFontBox;
         private NumericUpDown _clockSize;
         private NumericUpDown _dateSize;
+        private DarkTextBox _textColorInput;
+        private readonly List<ColorSwatch> _colorSwatches = new List<ColorSwatch>();
         private ToggleSwitch _showDateToggle;
         private ToggleSwitch _showLunarToggle;
         private ToggleSwitch _topMostToggle;
@@ -211,6 +213,7 @@ namespace winclock
             AddToBody(body, CreateField("时间字号（磅）", BuildSizeBox(true)), 0);
 
             _appearanceCard = CreateCard("外观", out body);
+            AddToBody(body, CreateColorField(), 8);
             _topMostToggle = BuildToggle("始终置顶");
             _topMostToggle.AccessibleName = "始终置顶";
             AddToBody(body, CreateToggleRow("始终置顶", _topMostToggle), 8);
@@ -337,6 +340,69 @@ namespace winclock
 
 
             return input;
+        }
+
+        private Control CreateColorField()
+        {
+            TableLayoutPanel row = new TableLayoutPanel();
+            row.Dock = DockStyle.Top;
+            row.AutoSize = true;
+            row.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            row.ColumnCount = 2;
+            row.RowCount = 1;
+            row.BackColor = Color.Transparent;
+            row.Margin = new Padding(0);
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100f));
+            row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 104f));
+            row.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+
+            FlowLayoutPanel swatches = new FlowLayoutPanel();
+            swatches.AutoSize = true;
+            swatches.AutoSizeMode = AutoSizeMode.GrowAndShrink;
+            swatches.WrapContents = false;
+            swatches.BackColor = Color.Transparent;
+            swatches.Margin = new Padding(0);
+            row.Controls.Add(swatches, 0, 0);
+
+            foreach (TextColorPreset preset in TextColorPalette.Presets)
+            {
+                ColorSwatch swatch = new ColorSwatch();
+                swatch.Value = TextColorPalette.Parse(preset.Hex);
+                swatch.Size = new Size(26, 26);
+                swatch.Margin = new Padding(0, 1, 6, 1);
+                swatch.Tag = preset;
+                swatch.AccessibleName = preset.Name + " " + preset.Hex;
+                _toolTip.SetToolTip(swatch, preset.Name + " " + preset.Hex);
+                swatch.Click += delegate(object sender, EventArgs e)
+                {
+                    TextColorPreset selected = (TextColorPreset)((ColorSwatch)sender).Tag;
+                    _textColorInput.Text = selected.Hex;
+                    UpdateColorSelection(selected.Hex);
+                };
+                _colorSwatches.Add(swatch);
+                swatches.Controls.Add(swatch);
+            }
+
+            _textColorInput = new DarkTextBox();
+            _textColorInput.Width = 100;
+            _textColorInput.Anchor = AnchorStyles.Left;
+            _textColorInput.Margin = new Padding(4, 3, 0, 0);
+            _textColorInput.AccessibleName = "时钟文字颜色十六进制值";
+            _toolTip.SetToolTip(_textColorInput, "可输入 #RRGGBB 形式的十六进制颜色，例如 #FFFFFF。");
+            _textColorInput.TextChanged += delegate { UpdateColorSelection(_textColorInput.Text); };
+            row.Controls.Add(_textColorInput, 1, 0);
+
+            return CreateField("时钟文字颜色", row);
+        }
+
+        private void UpdateColorSelection(string text)
+        {
+            Color color;
+            bool valid = TextColorPalette.TryParse(text, out color);
+            foreach (ColorSwatch swatch in _colorSwatches)
+            {
+                swatch.Selected = valid && swatch.Value.ToArgb() == color.ToArgb();
+            }
         }
 
         private Control CreateOpacityField()
@@ -596,6 +662,8 @@ namespace winclock
             FillFontBox(_dateFontBox, settings.DateFontFamily);
             _clockSize.Value = (decimal)settings.ClockFontSize;
             _dateSize.Value = (decimal)settings.DateFontSize;
+            _textColorInput.Text = settings.ClockTextColor;
+            UpdateColorSelection(_textColorInput.Text);
             _showDateToggle.Checked = settings.ShowDate;
             _showLunarToggle.Checked = settings.ShowLunar;
             _topMostToggle.Checked = settings.TopMost;
@@ -667,6 +735,7 @@ namespace winclock
             settings.TimeZoneOffsetHours = zone != null ? zone.Offset : 8;
             settings.ClockFontFamily = _clockFontBox.SelectedItem as string;
             settings.ClockFontSize = (float)_clockSize.Value;
+            settings.ClockTextColor = TextColorPalette.Normalize(_textColorInput.Text);
             settings.ShowDate = _showDateToggle.Checked;
             settings.DateFontFamily = _dateFontBox.SelectedItem as string;
             settings.DateFontSize = (float)_dateSize.Value;
@@ -684,6 +753,16 @@ namespace winclock
 
         private void Commit(bool closeAfterApply)
         {
+            Color textColor;
+            if (!TextColorPalette.TryParse(_textColorInput.Text, out textColor))
+            {
+                _statusLabel.ForeColor = UiTheme.Danger;
+                _statusLabel.Text = "文字颜色格式无效，请输入 #RRGGBB 形式的十六进制颜色。";
+                _textColorInput.Focus();
+                _textColorInput.SelectAll();
+                return;
+            }
+
             AppSettings settings = ReadSettings();
             bool applied = true;
             if (_apply != null)

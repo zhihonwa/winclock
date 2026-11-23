@@ -14,6 +14,7 @@ namespace winclock
         private int _cellHeight;
         private Color _foreColor = Color.Empty;
         private Color _backColor = Color.Empty;
+        private bool _showSeconds = true;
 
         public ClockTimeDisplay()
         {
@@ -42,7 +43,12 @@ namespace winclock
 
         public int RequiredWidth
         {
-            get { return _digitWidth * 6 + _colonWidth * 2; }
+            get
+            {
+                int digitCount = _showSeconds ? 6 : 4;
+                int colonCount = _showSeconds ? 2 : 1;
+                return _digitWidth * digitCount + _colonWidth * colonCount;
+            }
         }
 
         public int RequiredHeight
@@ -85,8 +91,9 @@ namespace winclock
 
         public void SetTime(DateTime time)
         {
-            string text = time.ToString("HH:mm:ss");
-            for (int i = 0; i < _labels.Length; i++)
+            string text = _showSeconds ? time.ToString("HH:mm:ss") : time.ToString("HH:mm");
+            int count = _showSeconds ? _labels.Length : 5;
+            for (int i = 0; i < count; i++)
             {
                 char value = text[i];
                 if (_shown[i] == value)
@@ -99,37 +106,62 @@ namespace winclock
             }
         }
 
-        public void SetColors(Color foreColor, Color backColor)
+        public void SetShowSeconds(bool showSeconds)
         {
-            if (_foreColor != foreColor)
+            if (_showSeconds == showSeconds)
             {
-                _foreColor = foreColor;
-                for (int i = 0; i < _labels.Length; i++)
-                {
-                    if (_labels[i].ForeColor != foreColor)
-                    {
-                        _labels[i].ForeColor = foreColor;
-                    }
-                }
+                return;
             }
 
-            if (_backColor != backColor)
+            _showSeconds = showSeconds;
+            for (int i = 5; i < _labels.Length; i++)
             {
-                _backColor = backColor;
-                BackColor = backColor;
-                for (int i = 0; i < _labels.Length; i++)
+                _labels[i].Visible = showSeconds;
+                _shown[i] = '\0';
+            }
+
+            RepositionLabels();
+            Invalidate();
+        }
+
+        public void SetForeColor(Color foreColor)
+        {
+            if (_foreColor == foreColor)
+            {
+                return;
+            }
+
+            _foreColor = foreColor;
+            for (int i = 0; i < _labels.Length; i++)
+            {
+                if (_labels[i].ForeColor != foreColor)
                 {
-                    if (_labels[i].BackColor != backColor)
-                    {
-                        _labels[i].BackColor = backColor;
-                    }
+                    _labels[i].ForeColor = foreColor;
+                }
+            }
+        }
+
+        public void SetBackColor(Color backColor)
+        {
+            if (_backColor == backColor)
+            {
+                return;
+            }
+
+            _backColor = backColor;
+            BackColor = backColor;
+            for (int i = 0; i < _labels.Length; i++)
+            {
+                if (_labels[i].BackColor != backColor)
+                {
+                    _labels[i].BackColor = backColor;
                 }
             }
         }
 
         public Point GetColorSamplePoint()
         {
-            Point local = new Point(Math.Max(1, Width / 2), Math.Max(1, Height / 2));
+            Point local = new Point(2, Math.Max(1, Height / 2));
             if (IsHandleCreated)
             {
                 return PointToScreen(local);
@@ -157,6 +189,11 @@ namespace winclock
 
             for (int i = 0; i < _labels.Length; i++)
             {
+                if (!_labels[i].Visible)
+                {
+                    continue;
+                }
+
                 _labels[i].Location = new Point(left, top);
                 left += _labels[i].Width;
             }

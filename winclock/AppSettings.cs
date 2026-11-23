@@ -1,5 +1,6 @@
 using System;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.Xml;
 using System.Xml.Serialization;
@@ -17,7 +18,9 @@ namespace winclock
         public int TimeZoneOffsetHours { get; set; } = 8;
         public string ClockFontFamily { get; set; } = DefaultClockFontFamily;
         public float ClockFontSize { get; set; } = 35f;
+        public string ClockTextColor { get; set; } = TextColorPalette.DefaultHex;
         public bool ShowDate { get; set; } = true;
+        public bool HideSeconds { get; set; } = false;
         public string DateFontFamily { get; set; } = DefaultDateFontFamily;
         public float DateFontSize { get; set; } = 12f;
         public bool ShowLunar { get; set; } = false;
@@ -53,6 +56,7 @@ namespace winclock
             DateFontFamily = NormalizeFont(DateFontFamily, DefaultDateFontFamily);
             ClockFontSize = NormalizeSize(ClockFontSize, 35f);
             DateFontSize = NormalizeSize(DateFontSize, 12f);
+            ClockTextColor = TextColorPalette.Normalize(ClockTextColor);
 
             if (OpacityPercent < 0)
             {
@@ -181,6 +185,92 @@ namespace winclock
                     key.DeleteValue(RunValueName, false);
                 }
             }
+        }
+    }
+
+    public sealed class TextColorPreset
+    {
+        public TextColorPreset(string name, string hex)
+        {
+            Name = name;
+            Hex = hex;
+        }
+
+        public string Name { get; private set; }
+
+        public string Hex { get; private set; }
+    }
+
+    public static class TextColorPalette
+    {
+        public const string DefaultHex = "#FFFFFF";
+
+        public static readonly TextColorPreset[] Presets =
+        {
+            new TextColorPreset("白色", "#FFFFFF"),
+            new TextColorPreset("黑色", "#000000"),
+            new TextColorPreset("红色", "#FF0000"),
+            new TextColorPreset("绿色", "#00B050"),
+            new TextColorPreset("蓝色", "#0070C0")
+        };
+
+        public static bool TryParse(string text, out Color color)
+        {
+            color = Color.White;
+            if (string.IsNullOrEmpty(text))
+            {
+                return false;
+            }
+
+            string value = text.Trim();
+            if (value.StartsWith("#", StringComparison.Ordinal))
+            {
+                value = value.Substring(1);
+            }
+
+            if (value.Length == 3)
+            {
+                value = new string(new[]
+                {
+                    value[0], value[0],
+                    value[1], value[1],
+                    value[2], value[2]
+                });
+            }
+
+            if (value.Length != 6)
+            {
+                return false;
+            }
+
+            int number;
+            if (!int.TryParse(value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out number))
+            {
+                return false;
+            }
+
+            color = Color.FromArgb((number >> 16) & 0xFF, (number >> 8) & 0xFF, number & 0xFF);
+            return true;
+        }
+
+        public static Color Parse(string value)
+        {
+            Color color;
+            return TryParse(value, out color) ? color : Color.White;
+        }
+
+        public static string ToHex(Color color)
+        {
+            return "#"
+                + color.R.ToString("X2", CultureInfo.InvariantCulture)
+                + color.G.ToString("X2", CultureInfo.InvariantCulture)
+                + color.B.ToString("X2", CultureInfo.InvariantCulture);
+        }
+
+        public static string Normalize(string value)
+        {
+            Color color;
+            return TryParse(value, out color) ? ToHex(color) : DefaultHex;
         }
     }
 
